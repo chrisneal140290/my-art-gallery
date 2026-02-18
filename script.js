@@ -63,7 +63,7 @@ let currentIndex = 0;
 document.querySelectorAll('.gallery-card').forEach(card => {
     card.addEventListener('click', () => {
         lbMode       = 'image';
-        currentList  = galleryImages[card.getAttribute('data-category')] || [];
+        currentList  = galleryImages[card.getAttribute('data-category')] ||;
         currentIndex = 0;
 
         lightboxImg.style.display = 'block';
