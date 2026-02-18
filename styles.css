@@ -103,6 +103,40 @@ body {
 .lightbox-next { right: 20px; }
 .lightbox-prev:hover, .lightbox-next:hover { opacity: 1; }
 
+/* ── ROUNDED CORNERS FOR IMAGES (more pronounced, includes hero) ──────────────── */
+img {
+    border-radius: 24px;          /* main radius - quite rounded now */
+    overflow: hidden;             /* clips content to the rounded shape */
+}
+
+/* Only keep logo sharp/straight edges */
+.logo img {
+    border-radius: 0;
+}
+
+/* Extra polish for gallery previews */
+.gallery-image {
+    border-radius: 28px;          /* even softer for category cards */
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);  /* subtle depth */
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease;
+}
+
+.gallery-card:hover .gallery-image {
+    transform: scale(1.04);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+}
+
+/* Lightbox image */
+#lightboxImage {
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);  /* stronger shadow when enlarged */
+}
+
+/* Video thumbnail */
+.yt-thumb-wrap img {
+    border-radius: 24px;
+}
+
 /* —— RESPONSIVE —— */
 @media (max-width: 968px) {
   .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
