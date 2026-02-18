@@ -31,8 +31,8 @@ function buildImageList(prefix, max) {
 
 const galleryImages = {
     food:     buildImageList('food',   20),
-    animals:  buildImageList('nature', 20),
-    olympics: buildImageList('winter', 20)
+    nature:  buildImageList('nature', 20),
+    winter: buildImageList('winter', 20)
 };
 
 // ── VIDEO LIST ────────────────────────────────────────────────────────────────
