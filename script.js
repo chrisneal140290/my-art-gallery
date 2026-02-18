@@ -31,8 +31,8 @@ function buildImageList(prefix, max) {
 
 const galleryImages = {
     food:     buildImageList('food',   20),
-    animals:  buildImageList('nature', 20),
-    olympics: buildImageList('winter', 20)
+    nature:  buildImageList('nature', 20),
+    winter: buildImageList('winter', 20)
 };
 
 // ── VIDEO LIST ────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ let currentIndex = 0;
 document.querySelectorAll('.gallery-card').forEach(card => {
     card.addEventListener('click', () => {
         lbMode       = 'image';
-        currentList  = galleryImages[card.getAttribute('data-category')] || [];
+        currentList  = galleryImages[card.getAttribute('data-category')] ||;
         currentIndex = 0;
 
         lightboxImg.style.display = 'block';
