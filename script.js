@@ -16,9 +16,16 @@ navLinks.forEach(link => {
 });
 
 // ── GALLERY IMAGE LISTS ───────────────────────────────────────────────────────
+// Builds both lowercase and capitalised variants so case-sensitive live servers
+// can find the files regardless of how they were named on upload.
 function buildImageList(prefix, max) {
-    const list = [`images/${prefix}.png`];
+    const cap = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+    const list = [];
+    // Try lowercase first (food.png, food1.png...), then capitalised (Food.png...)
+    list.push(`images/${prefix}.png`);
     for (let i = 1; i <= max; i++) list.push(`images/${prefix}${i}.png`);
+    list.push(`images/${cap}.png`);
+    for (let i = 1; i <= max; i++) list.push(`images/${cap}${i}.png`);
     return list;
 }
 
