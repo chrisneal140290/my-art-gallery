@@ -16,12 +16,9 @@ navLinks.forEach(link => {
 });
 
 // ── GALLERY IMAGE LISTS ───────────────────────────────────────────────────────
-// Builds both lowercase and capitalised variants so case-sensitive live servers
-// can find the files regardless of how they were named on upload.
 function buildImageList(prefix, max) {
     const cap = prefix.charAt(0).toUpperCase() + prefix.slice(1);
     const list = [];
-    // Try lowercase first (food.png, food1.png...), then capitalised (Food.png...)
     list.push(`images/${prefix}.png`);
     for (let i = 1; i <= max; i++) list.push(`images/${prefix}${i}.png`);
     list.push(`images/${cap}.png`);
@@ -35,16 +32,49 @@ const galleryImages = {
     olympics: buildImageList('winter', 20)
 };
 
-// ── VIDEO LIST ────────────────────────────────────────────────────────────────
-const videoList = [
-    { id: 'zFdKEW2b8vk', title: 'Taking home gold #winterolympics #goldmedal' },
-    { id: 'piCTmgbDqZQ', title: 'Going for gold #WinterOlympics' },
-    { id: '8Iq0ZOXVP40', title: '15 February 2026' },
-    { id: 'dRvuFUENXHo', title: 'Winter Olympics 2026' },
-    { id: '3HUENV19Yfc', title: 'Spring has sprung' },
-    { id: 'gYA9AehiZE8', title: 'Turkey time' },
-    { id: 'm5onGETteRI', title: 'Eye time lapse' }
-];
+// ── DYNAMIC VIDEO LIST FROM ANY SINGLE .csv IN /videos/ ───────────────────────
+let videoList = [];  // filled from CSV
+
+async function loadVideosFromFolder() {
+    try {
+        // Try to list files — GitHub Pages serves directory index if enabled,
+        // but more reliably we can try common timestamp patterns or fetch known name.
+        // For simplicity: assume only one .csv exists in /videos/
+        // We'll try fetching a few likely names, or use a fixed one if you prefer.
+
+        // Option A: fixed name (simplest if upload script always uses same name)
+        // let csvUrl = 'videos/videos.csv';
+
+        // Option B: dynamic — try to guess / fetch the only .csv (requires server listing or known pattern)
+        // Since GitHub Pages doesn't give directory listing easily, best is:
+        // 1. Your upload script should create/overwrite a fixed name like videos.csv
+        // 2. Or use a known pattern like latest timestamp
+
+        // Recommended: fixed name + upload script overwrites 'videos.csv'
+        const csvUrl = 'videos/videos.csv';  // ← change if your script uses different fixed name
+
+        const response = await fetch(csvUrl);
+        if (!response.ok) {
+            throw new Error(`CSV fetch failed: ${response.status}`);
+        }
+
+        const text = await response.text();
+        const rows = text.trim().split('\n').slice(1); // skip header row
+
+        videoList = rows.map(row => {
+            const [id, title] = row.split(',').map(str => str.trim().replace(/^"|"$/g, ''));
+            return { id, title };
+        }).filter(v => v.id && v.title); // skip bad rows
+
+        console.log(`Loaded ${videoList.length} videos from ${csvUrl}`);
+    } catch (err) {
+        console.error('Failed to load video CSV:', err);
+        videoList = []; // fallback — no videos
+    }
+}
+
+// Load once when page starts
+loadVideosFromCSV();
 
 // ── LIGHTBOX ELEMENTS ─────────────────────────────────────────────────────────
 const lightbox       = document.getElementById('lightbox');
@@ -106,6 +136,10 @@ function stepImage(index, direction) {
 
 // ── VIDEO LIGHTBOX ────────────────────────────────────────────────────────────
 document.getElementById('videoFeatured').addEventListener('click', () => {
+    if (videoList.length === 0) {
+        console.warn('No videos available — CSV not loaded or empty');
+        return;
+    }
     openVideoAt(0);
 });
 
@@ -116,7 +150,6 @@ function openVideoAt(index) {
     lightboxImg.style.display = 'none';
     lightboxImg.src = '';
     lightboxVideo.classList.add('active');
-    // Updated for better autoplay support on mobile (mute required for reliability)
     lightboxIframe.src = `https://www.youtube.com/embed/${videoList[index].id}?autoplay=1&mute=1&playsinline=1`;
     lightboxPrev.style.display = 'block';
     lightboxNext.style.display = 'block';
@@ -127,6 +160,7 @@ function openVideoAt(index) {
 
 function stepVideo(direction) {
     const total = videoList.length;
+    if (total === 0) return;
     const next  = ((currentIndex + direction) % total + total) % total;
     lightboxIframe.src = '';
     setTimeout(() => openVideoAt(next), 50);
@@ -168,7 +202,7 @@ document.addEventListener('keydown', (e) => {
 // ── TOUCH SWIPE FOR LIGHTBOX (images & videos) ────────────────────────────────
 let touchStartX = 0;
 let touchEndX = 0;
-const swipeThreshold = 60; // pixels — adjust if too sensitive or not sensitive enough
+const swipeThreshold = 60;
 
 lightbox.addEventListener('touchstart', (e) => {
     if (!lightbox.classList.contains('active')) return;
@@ -178,30 +212,43 @@ lightbox.addEventListener('touchstart', (e) => {
 lightbox.addEventListener('touchend', (e) => {
     if (!lightbox.classList.contains('active')) return;
     touchEndX = e.changedTouches[0].screenX;
-
     const diff = touchStartX - touchEndX;
 
-    // Swipe left → next
     if (diff > swipeThreshold) {
-        if (lbMode === 'image') {
-            stepImage(currentIndex + 1, +1);
-        } else {
-            stepVideo(+1);
-        }
-    }
-    // Swipe right → previous
-    else if (diff < -swipeThreshold) {
-        if (lbMode === 'image') {
-            stepImage(currentIndex - 1, -1);
-        } else {
-            stepVideo(-1);
-        }
+        if (lbMode === 'image') stepImage(currentIndex + 1, +1);
+        else stepVideo(+1);
+    } else if (diff < -swipeThreshold) {
+        if (lbMode === 'image') stepImage(currentIndex - 1, -1);
+        else stepVideo(-1);
     }
 
-    // Reset for next swipe
     touchStartX = 0;
     touchEndX = 0;
 }, { passive: true });
+
+// ── TRACKPAD TWO-FINGER HORIZONTAL SWIPE (wheel event) ────────────────────────
+lightbox.addEventListener('wheel', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+
+    const absDeltaX = Math.abs(e.deltaX);
+    const absDeltaY = Math.abs(e.deltaY);
+
+    if (absDeltaX > absDeltaY * 1.5 && absDeltaX > 15) {
+        e.preventDefault();
+
+        if (lightbox.dataset.swipeLocked === 'true') return;
+        lightbox.dataset.swipeLocked = 'true';
+        setTimeout(() => { lightbox.dataset.swipeLocked = 'false'; }, 300);
+
+        if (e.deltaX > 0) {
+            if (lbMode === 'image') stepImage(currentIndex + 1, +1);
+            else stepVideo(+1);
+        } else if (e.deltaX < 0) {
+            if (lbMode === 'image') stepImage(currentIndex - 1, -1);
+            else stepVideo(-1);
+        }
+    }
+}, { passive: false });
 
 // ── SMOOTH SCROLL ─────────────────────────────────────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -222,36 +269,3 @@ window.addEventListener('scroll', () => {
         header.classList.remove('scrolled');
     }
 }, { passive: true });
-// ── TRACKPAD TWO-FINGER HORIZONTAL SWIPE (wheel event) ────────────────────────
-lightbox.addEventListener('wheel', (e) => {
-    if (!lightbox.classList.contains('active')) return;
-
-    // Only consider it a horizontal gesture if deltaX is clearly dominant
-    const absDeltaX = Math.abs(e.deltaX);
-    const absDeltaY = Math.abs(e.deltaY);
-
-    if (absDeltaX > absDeltaY * 1.5 && absDeltaX > 15) {  // lowered threshold + stricter horizontal check
-        e.preventDefault();  // stop vertical page scroll during horizontal gesture
-
-        // Add a small debounce-like delay to avoid double triggers on some trackpads
-        if (lightbox.dataset.swipeLocked === 'true') return;
-        lightbox.dataset.swipeLocked = 'true';
-        setTimeout(() => { lightbox.dataset.swipeLocked = 'false'; }, 300);
-
-        if (e.deltaX > 0) {
-            // → swipe left = next
-            if (lbMode === 'image') {
-                stepImage(currentIndex + 1, +1);
-            } else {
-                stepVideo(+1);
-            }
-        } else if (e.deltaX < 0) {
-            // ← swipe right = previous
-            if (lbMode === 'image') {
-                stepImage(currentIndex - 1, -1);
-            } else {
-                stepVideo(-1);
-            }
-        }
-    }
-}, { passive: false });
