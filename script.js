@@ -37,25 +37,12 @@ let videoList = [];  // filled from CSV
 
 async function loadVideosFromFolder() {
     try {
-        // Try to list files — GitHub Pages serves directory index if enabled,
-        // but more reliably we can try common timestamp patterns or fetch known name.
-        // For simplicity: assume only one .csv exists in /videos/
-        // We'll try fetching a few likely names, or use a fixed one if you prefer.
-
-        // Option A: fixed name (simplest if upload script always uses same name)
-        // let csvUrl = 'videos/mariewatson3371.csv';
-
-        // Option B: dynamic — try to guess / fetch the only .csv (requires server listing or known pattern)
-        // Since GitHub Pages doesn't give directory listing easily, best is:
-        // 1. Your upload script should create/overwrite a fixed name like videos.csv
-        // 2. Or use a known pattern like latest timestamp
-
-        // Recommended: fixed name + upload script overwrites 'videos.csv'
-        const csvUrl = 'videos/mariewatson3371.csv';  // ← change if your script uses different fixed name
+        // Fixed filename — change only if your upload script uses a different consistent name
+        const csvUrl = 'videos/mariewatson3371.csv';
 
         const response = await fetch(csvUrl);
         if (!response.ok) {
-            throw new Error(`CSV fetch failed: ${response.status}`);
+            throw new Error(`CSV fetch failed: ${response.status} — ${response.statusText}`);
         }
 
         const text = await response.text();
@@ -64,7 +51,7 @@ async function loadVideosFromFolder() {
         videoList = rows.map(row => {
             const [id, title] = row.split(',').map(str => str.trim().replace(/^"|"$/g, ''));
             return { id, title };
-        }).filter(v => v.id && v.title); // skip bad rows
+        }).filter(v => v.id && v.title); // skip invalid rows
 
         console.log(`Loaded ${videoList.length} videos from ${csvUrl}`);
     } catch (err) {
@@ -73,8 +60,8 @@ async function loadVideosFromFolder() {
     }
 }
 
-// Load once when page starts
-loadVideosFromCSV();
+// Load videos as soon as page starts
+loadVideosFromFolder();  // ← FIXED HERE (was wrong function name)
 
 // ── LIGHTBOX ELEMENTS ─────────────────────────────────────────────────────────
 const lightbox       = document.getElementById('lightbox');
