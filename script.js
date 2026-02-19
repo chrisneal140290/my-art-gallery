@@ -33,11 +33,11 @@ const galleryImages = {
 };
 
 // ── DYNAMIC VIDEO LIST FROM mariewatson3371.csv ───────────────────────────────
-let videoList = [];  // filled from CSV
+let videoList = []; // filled from CSV
 
 async function loadVideosFromFolder() {
     try {
-        const csvUrl = 'videos/mariewatson3371.csv';  // ← fixed to your exact filename
+        const csvUrl = 'videos/mariewatson3371.csv';
 
         const response = await fetch(csvUrl);
         if (!response.ok) {
@@ -48,12 +48,27 @@ async function loadVideosFromFolder() {
         const rows = text.trim().split('\n').slice(1); // skip header row
 
         videoList = rows.map(row => {
-            const [id, title] = row.split(',').map(str => str.trim().replace(/^"|"$/g, ''));
-            return { id, title };
-        }).filter(v => v.id && v.title); // skip invalid rows
+            // Format: "Title","https://www.youtube.com/watch?v=VIDEO_ID"
+            const parts = row.split(',');
+            if (parts.length < 2) return null;
+
+            let title = parts[0].trim().replace(/^"|"$/g, '');
+            let url = parts.slice(1).join(',').trim().replace(/^"|"$/g, ''); // handle commas in URL
+
+            // Extract YouTube ID from URL
+            const idMatch = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/i);
+            const id = idMatch ? idMatch[1] : null;
+
+            if (id && title) {
+                return { id, title };
+            }
+            return null;
+        }).filter(Boolean); // remove invalid rows
 
         console.log(`Successfully loaded ${videoList.length} videos from ${csvUrl}`);
-        console.log('First few videos:', videoList.slice(0, 3)); // for debugging
+        if (videoList.length > 0) {
+            console.log('First few videos:', videoList.slice(0, 3));
+        }
     } catch (err) {
         console.error('Failed to load mariewatson3371.csv:', err);
         videoList = []; // fallback — no videos
@@ -216,17 +231,13 @@ lightbox.addEventListener('touchend', (e) => {
 // ── TRACKPAD TWO-FINGER HORIZONTAL SWIPE (wheel event) ────────────────────────
 lightbox.addEventListener('wheel', (e) => {
     if (!lightbox.classList.contains('active')) return;
-
     const absDeltaX = Math.abs(e.deltaX);
     const absDeltaY = Math.abs(e.deltaY);
-
     if (absDeltaX > absDeltaY * 1.5 && absDeltaX > 15) {
         e.preventDefault();
-
         if (lightbox.dataset.swipeLocked === 'true') return;
         lightbox.dataset.swipeLocked = 'true';
         setTimeout(() => { lightbox.dataset.swipeLocked = 'false'; }, 300);
-
         if (e.deltaX > 0) {
             if (lbMode === 'image') stepImage(currentIndex + 1, +1);
             else stepVideo(+1);
