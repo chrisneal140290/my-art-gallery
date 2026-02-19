@@ -32,17 +32,16 @@ const galleryImages = {
     olympics: buildImageList('winter', 20)
 };
 
-// ── DYNAMIC VIDEO LIST FROM ANY SINGLE .csv IN /videos/ ───────────────────────
+// ── DYNAMIC VIDEO LIST FROM mariewatson3371.csv ───────────────────────────────
 let videoList = [];  // filled from CSV
 
 async function loadVideosFromFolder() {
     try {
-        // Fixed filename — change only if your upload script uses a different consistent name
-        const csvUrl = 'videos/mariewatson3371.csv';
+        const csvUrl = 'videos/mariewatson3371.csv';  // ← fixed to your exact filename
 
         const response = await fetch(csvUrl);
         if (!response.ok) {
-            throw new Error(`CSV fetch failed: ${response.status} — ${response.statusText}`);
+            throw new Error(`CSV fetch failed: ${response.status} ${response.statusText}`);
         }
 
         const text = await response.text();
@@ -53,15 +52,16 @@ async function loadVideosFromFolder() {
             return { id, title };
         }).filter(v => v.id && v.title); // skip invalid rows
 
-        console.log(`Loaded ${videoList.length} videos from ${csvUrl}`);
+        console.log(`Successfully loaded ${videoList.length} videos from ${csvUrl}`);
+        console.log('First few videos:', videoList.slice(0, 3)); // for debugging
     } catch (err) {
-        console.error('Failed to load video CSV:', err);
+        console.error('Failed to load mariewatson3371.csv:', err);
         videoList = []; // fallback — no videos
     }
 }
 
 // Load videos as soon as page starts
-loadVideosFromFolder();  // ← FIXED HERE (was wrong function name)
+loadVideosFromFolder();
 
 // ── LIGHTBOX ELEMENTS ─────────────────────────────────────────────────────────
 const lightbox       = document.getElementById('lightbox');
@@ -124,7 +124,7 @@ function stepImage(index, direction) {
 // ── VIDEO LIGHTBOX ────────────────────────────────────────────────────────────
 document.getElementById('videoFeatured').addEventListener('click', () => {
     if (videoList.length === 0) {
-        console.warn('No videos available — CSV not loaded or empty');
+        console.warn('No videos available — check videos/mariewatson3371.csv');
         return;
     }
     openVideoAt(0);
