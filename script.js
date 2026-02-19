@@ -54,9 +54,7 @@ async function loadVideosFromFolder() {
     let text = await response.text();
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
     const rows = text.replace(/\r\n?/g, '\n').trim().split('\n');
-
     const dataRows = rows.length && /url|video/i.test(rows[0]) ? rows.slice(1) : rows;
-
     videoList = dataRows
       .map(row => {
         if (!row) return null;
@@ -69,7 +67,6 @@ async function loadVideosFromFolder() {
         return id ? { id, title } : null;
       })
       .filter(Boolean);
-
     console.log(`[videos] Loaded ${videoList.length} entries from CSV`);
   } catch (err) {
     console.error('Failed to load mariewatson3371.csv:', err);
@@ -91,13 +88,10 @@ let lbMode = 'image';
 let currentList = [];
 let currentIndex = 0;
 
-// —— IMAGE LIGHTBOX – USE EVENT DELEGATION FOR CLICKS ———————————————
-document.addEventListener('click', function(e) {
-  const category = e.target.closest('.gallery-category');
-  if (!category) return;
-
+// —— NAMED HANDLER FOR GALLERY CLICK (reusable for both delegation and direct) ——
+function handleGalleryClick(category) {
   const folder = category.getAttribute('data-folder');
-  console.log(`Clicked gallery: ${folder} | Images preloaded: ${galleryImages[folder]?.length || 0}`);
+  console.log(`Gallery clicked: ${folder} | Preloaded images: ${galleryImages[folder]?.length || 0}`);
 
   lbMode = 'image';
   currentList = galleryImages[folder] || [];
@@ -109,6 +103,14 @@ document.addEventListener('click', function(e) {
   if (lightboxPrev) lightboxPrev.style.display = 'block';
   if (lightboxNext) lightboxNext.style.display = 'block';
   openImageAt(0);
+}
+
+// —— IMAGE LIGHTBOX – PRIMARY: EVENT DELEGATION ———————————————
+document.addEventListener('click', function(e) {
+  const category = e.target.closest('.gallery-category');
+  if (category) {
+    handleGalleryClick(category);
+  }
 });
 
 function openImageAt(index) {
@@ -116,6 +118,7 @@ function openImageAt(index) {
     console.warn('Lightbox or currentList empty – cannot open image');
     return;
   }
+  console.log('Loading image:', currentList[index]); // debug URL
   lightboxImg.src = currentList[index];
   lightboxImg.onerror = function () {
     this.onerror = null;
@@ -140,6 +143,7 @@ function stepImage(index, direction) {
       this.onerror = null;
       tryIndex(i + direction);
     };
+    console.log('Stepping to image:', currentList[i]); // debug
     lightboxImg.src = currentList[i];
   }
   tryIndex(index);
@@ -252,10 +256,8 @@ lightbox?.addEventListener('wheel', (e) => {
   const nextBtn = document.getElementById('shopNext');
   const dotsWrap = document.getElementById('shopDots');
   if (!carousel || !prevBtn || !nextBtn || !dotsWrap) return;
-
   let current = 0;
   const slides = () => Array.from(carousel.querySelectorAll('.shop-slide'));
-
   function buildDots() {
     dotsWrap.innerHTML = '';
     slides().forEach((_, i) => {
@@ -284,14 +286,12 @@ lightbox?.addEventListener('wheel', (e) => {
   }
   prevBtn.addEventListener('click', () => goTo(current - 1));
   nextBtn.addEventListener('click', () => goTo(current + 1));
-
   let tx = 0;
   carousel.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; }, { passive: true });
   carousel.addEventListener('touchend', e => {
     const diff = tx - e.changedTouches[0].screenX;
     if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
   }, { passive: true });
-
   buildDots();
   updateArrows();
 })();
@@ -363,4 +363,16 @@ window.addEventListener('scroll', () => {
 
   buildDots();
   updateArrows();
+
+  // FALLBACK: Re-attach direct listeners after carousel settles
+  setTimeout(() => {
+    const categories = document.querySelectorAll('.gallery-category');
+    categories.forEach(cat => {
+      // Remove old to avoid duplicates
+      cat.removeEventListener('click', handleGalleryClick);
+      cat.addEventListener('click', () => handleGalleryClick(cat));
+    });
+    console.log(`Fallback: Re-attached direct listeners to ${categories.length} gallery categories`);
+  }, 1500); // 1.5 seconds to be safe
+
 })();
