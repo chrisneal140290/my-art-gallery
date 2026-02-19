@@ -222,24 +222,31 @@ window.addEventListener('scroll', () => {
         header.classList.remove('scrolled');
     }
 }, { passive: true });
-// ── TRACKPAD / MOUSE WHEEL SWIPE SUPPORT (two-finger horizontal swipe) ──────────
+// ── TRACKPAD TWO-FINGER HORIZONTAL SWIPE (wheel event) ────────────────────────
 lightbox.addEventListener('wheel', (e) => {
     if (!lightbox.classList.contains('active')) return;
 
-    // Only react to horizontal movement (trackpad two-finger left/right swipe)
-    // Ignore vertical scrolling (normal mouse wheel / trackpad up-down)
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 20) {
-        e.preventDefault(); // prevent page scroll while in lightbox
+    // Only consider it a horizontal gesture if deltaX is clearly dominant
+    const absDeltaX = Math.abs(e.deltaX);
+    const absDeltaY = Math.abs(e.deltaY);
+
+    if (absDeltaX > absDeltaY * 1.5 && absDeltaX > 15) {  // lowered threshold + stricter horizontal check
+        e.preventDefault();  // stop vertical page scroll during horizontal gesture
+
+        // Add a small debounce-like delay to avoid double triggers on some trackpads
+        if (lightbox.dataset.swipeLocked === 'true') return;
+        lightbox.dataset.swipeLocked = 'true';
+        setTimeout(() => { lightbox.dataset.swipeLocked = 'false'; }, 300);
 
         if (e.deltaX > 0) {
-            // Swipe left → next image/video
+            // → swipe left = next
             if (lbMode === 'image') {
                 stepImage(currentIndex + 1, +1);
             } else {
                 stepVideo(+1);
             }
         } else if (e.deltaX < 0) {
-            // Swipe right → previous image/video
+            // ← swipe right = previous
             if (lbMode === 'image') {
                 stepImage(currentIndex - 1, -1);
             } else {
@@ -247,4 +254,4 @@ lightbox.addEventListener('wheel', (e) => {
             }
         }
     }
-}, { passive: false });  // passive: false is needed so we can call e.preventDefault()
+}, { passive: false });
