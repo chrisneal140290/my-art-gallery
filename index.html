@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motha Maker - Art Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="header">
+    <div class="logo">
+      <a href="#home">
+        <img src="images/logo.png" alt="Motha Maker Logo" class="logo-img" />
+      </a>
+    </div>
+    <button class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav-menu" id="navMenu">
+      <a href="#gallery" class="nav-link">Gallery</a>
+      <a href="#videos" class="nav-link">Videos</a>
+      <a href="#shop" class="nav-link">Shop</a>
+      <a href="#about" class="nav-link">About</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="container">
+      <h1>Digital art, made by a human hand</h1>
+      <p class="subtitle">No shortcuts. No generators. Just authentic, human-made art</p>
+      <div class="hero-image-container">
+        <img
+          src="images/sunflower.png"
+          alt="Sunflower artwork"
+          class="hero-image"
+          onerror="this.onerror=null;this.src='images/sunflower.jpg';"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ★★★★★ UPDATED GALLERY SECTION (carousel + folder-based galleries) ★★★★★ -->
+  <section class="gallery-section" id="gallery">
+    <div class="container">
+      <h2 class="section-heading">Galleries</h2>
+
+      <div class="gallery-carousel-wrap">
+        <button class="gallery-arrow gallery-arrow--prev" aria-label="Previous gallery">‹</button>
+
+        <div class="gallery-carousel" id="galleryCarousel">
+          <!-- Animals -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="animals">
+              <h2>Animals</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/animals/1.png"
+                  alt="Animals gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/animals/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Wildlife illustrations full of character.</p>
+            </div>
+          </div>
+
+          <!-- Birds -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="birds">
+              <h2>Birds</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/birds/1.png"
+                  alt="Birds gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/birds/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Bird art inspired by natural movement.</p>
+            </div>
+          </div>
+
+          <!-- Food -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="food">
+              <h2>Food</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/food/1.png"
+                  alt="Food gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/food/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Delicious digital treats.</p>
+            </div>
+          </div>
+
+          <!-- Nature Echoes -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="natureechoes">
+              <h2>Nature Echoes</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/natureechoes/1.png"
+                  alt="Nature Echoes gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/natureechoes/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Atmospheric nature‑themed artwork.</p>
+            </div>
+          </div>
+
+          <!-- Plants -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="plants">
+              <h2>Plants</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/plants/1.png"
+                  alt="Plants gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/plants/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Greenery in bold artistic form.</p>
+            </div>
+          </div>
+
+          <!-- Sunflowers -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="sunflowers">
+              <h2>Sunflowers</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/sunflowers/1.png"
+                  alt="Sunflowers gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/sunflowers/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Bright and iconic sunflower studies.</p>
+            </div>
+          </div>
+
+          <!-- Winter Olympics 2026 -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="winterolympics2026">
+              <h2>Winter Olympics 2026</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/winterolympics2026/1.png"
+                  alt="Winter Olympics 2026 gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/winterolympics2026/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Dynamic images of winter sport motion.</p>
+            </div>
+          </div>
+
+          <!-- Christmas -->
+          <div class="gallery-slide">
+            <div class="gallery-category" data-folder="christmas">
+              <h2>Christmas</h2>
+              <div class="gallery-card">
+                <img
+                  src="images/christmas/1.png"
+                  alt="Christmas gallery preview"
+                  class="gallery-image"
+                  onerror="this.onerror=null;this.src='images/christmas/1.png';"
+                />
+              </div>
+              <p class="gallery-description">Festive seasonal illustrations.</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="gallery-arrow gallery-arrow--next" aria-label="Next gallery">›</button>
+      </div>
+
+      <div class="gallery-dots" id="galleryDots"></div>
+    </div>
+  </section>
+  <!-- ★★★★★ END UPDATED GALLERY SECTION ★★★★★ -->
+
+  <!-- Shop Section (UNCHANGED) -->
+  <section class="shop-section" id="shop">
+    <div class="container">
+      <h2 class="section-heading">Shop</h2>
+      <p class="section-description">Original digital prints, available to own</p>
+      <div class="shop-carousel-wrap">
+        <button id="shopPrev" class="shop-arrow shop-arrow--prev">‹</button>
+        <div class="shop-carousel" id="shopCarousel">
+          <div class="shop-slide"><div class="shop-slide-inner"><div id="product-component-1771500370858"></div></div></div>
+          <div class="shop-slide"><div class="shop-slide-inner"><div id="product-component-1771500230986"></div></div></div>
+          <div class="shop-slide"><div class="shop-slide-inner"><div id="product-component-1771500327973"></div></div></div>
+          <div class="shop-slide"><div class="shop-slide-inner"><div id="product-component-1771500303747"></div></div></div>
+        </div>
+        <button id="shopNext" class="shop-arrow shop-arrow--next">›</button>
+      </div>
+      <div class="shop-dots" id="shopDots"></div>
+    </div>
+  </section>
+
+  <!-- Shopify Buy‑Button scripts (UNCHANGED) -->
+  <!-- Product 1 -->
+  <script type="text/javascript">
+    (function () {
+      var scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+      if (window.ShopifyBuy) { if (window.ShopifyBuy.UI) { ShopifyBuyInit(); } else { loadScript(); } }
+      else { loadScript(); }
+      function loadScript() {
+        var s = document.createElement('script'); s.async = true; s.src = scriptURL;
+        (document.head || document.body).appendChild(s); s.onload = ShopifyBuyInit;
+      }
+      function ShopifyBuyInit() {
+        var client = ShopifyBuy.buildClient({ domain: 'wr18gc-jx.myshopify.com', storefrontAccessToken: 'e4fcf237310b8885d740dfad2d7c649a' });
+        ShopifyBuy.UI.onReady(client).then(function (ui) {
+          ui.createComponent('product', {
+            id: '15619391193462',
+            node: document.getElementById('product-component-1771500370858'),
+            moneyFormat: '%C2%A3%7B%7Bamount%7D%7D',
+            options: {}
+          });
+        });
+      }
+    })();
+  </script>
+
+  <!-- Product 2 -->
+  <script type="text/javascript">
+    (function () {
+      var scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+      if (window.ShopifyBuy) { if (window.ShopifyBuy.UI) { ShopifyBuyInit(); } else { loadScript(); } }
+      else { loadScript(); }
+      function loadScript() {
+        var s = document.createElement('script'); s.async = true; s.src = scriptURL;
+        (document.head || document.body).appendChild(s); s.onload = ShopifyBuyInit;
+      }
+      function ShopifyBuyInit() {
+        var client = ShopifyBuy.buildClient({ domain: 'wr18gc-jx.myshopify.com', storefrontAccessToken: 'e4fcf237310b8885d740dfad2d7c649a' });
+        ShopifyBuy.UI.onReady(client).then(function (ui) {
+          ui.createComponent('product', {
+            id: '15619422617974',
+            node: document.getElementById('product-component-1771500230986'),
+            moneyFormat: '%C2%A3%7B%7Bamount%7D%7D',
+            options: {}
+          });
+        });
+      }
+    })();
+  </script>
+
+  <!-- Product 3 -->
+  <script type="text/javascript">
+    (function () {
+      var scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+      if (window.ShopifyBuy) { if (window.ShopifyBuy.UI) { ShopifyBuyInit(); } else { loadScript(); } }
+      else { loadScript(); }
+      function loadScript() {
+        var s = document.createElement('script'); s.async = true; s.src = scriptURL;
+        (document.head || document.body).appendChild(s); s.onload = ShopifyBuyInit;
+      }
+      function ShopifyBuyInit() {
+        var client = ShopifyBuy.buildClient({ domain: 'wr18gc-jx.myshopify.com', storefrontAccessToken: 'e4fcf237310b8885d740dfad2d7c649a' });
+        ShopifyBuy.UI.onReady(client).then(function (ui) {
+          ui.createComponent('product', {
+            id: '15619426550134',
+            node: document.getElementById('product-component-1771500327973'),
+            moneyFormat: '%C2%A3%7B%7Bamount%7D%7D',
+            options: {}
+          });
+        });
+      }
+    })();
+  </script>
+
+  <!-- Product 4 -->
+  <script type="text/javascript">
+    (function () {
+      var scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+      if (window.ShopifyBuy) { if (window.ShopifyBuy.UI) { ShopifyBuyInit(); } else { loadScript(); } }
+      else { loadScript(); }
+      function loadScript() {
+        var s = document.createElement('script'); s.async = true; s.src = scriptURL;
+        (document.head || document.body).appendChild(s); s.onload = ShopifyBuyInit;
+      }
+      function ShopifyBuyInit() {
+        var client = ShopifyBuy.buildClient({ domain: 'wr18gc-jx.myshopify.com', storefrontAccessToken: 'e4fcf237310b8885d740dfad2d7c649a' });
+        ShopifyBuy.UI.onReady(client).then(function (ui) {
+          ui.createComponent('product', {
+            id: '15619424158070',
+            node: document.getElementById('product-component-1771500303747'),
+            moneyFormat: '%C2%A3%7B%7Bamount%7D%7D',
+            options: {}
+          });
+        });
+      }
+    })();
+  </script>
+
+  <!-- Videos Section (UNCHANGED) -->
+  <section class="videos-section" id="videos">
+    <div class="container">
+      <h2>In Motion</h2>
+      <p class="section-description">Time-lapse of my work.</p>
+      <div class="video-featured" id="videoFeatured">
+        <div class="yt-thumb-wrap">
+          <img src="images/videos.png" alt="Watch our videos" />
+          <div class="yt-play-btn">▶</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer (UNCHANGED) -->
+  <footer class="footer" id="about">
+    <div class="container">
+      <p class="copyright">© 2026 All artwork and content © Marie Neal</p>
+      <p class="social-links">
+        Follow me on
+        <a href="https://www.instagram.com/mothaandmaker">Instagram</a> ·
+        <a href="https://www.youtube.com/@MothaandMaker">YouTube</a> ·
+        <a href="https://www.facebook.com/people/Motha-Maker/61579338660267">Facebook</a>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Lightbox (UNCHANGED STRUCTURE) -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">×</button>
+    <button class="lightbox-prev" id="lightboxPrev">‹</button>
+    <button class="lightbox-next" id="lightboxNext">›</button>
+    <div class="lightbox-content">
+      <img id="lightboxImage" />
+      <div class="lightbox-video" id="lightboxVideo">
+        <iframe
+          id="lightboxIframe"
+          frameborder="0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js?v=12" defer></script>
+</body>
+</html>
