@@ -1,5 +1,6 @@
 /* —— GOOGLE FONTS —— */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap');
+
 /* —— RESET & BASE —— */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -18,6 +19,7 @@ body {
   line-height: 1.7;
 }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+
 /* —— HEADER —— */
 .header {
   position: fixed;
@@ -53,12 +55,14 @@ body {
   margin-bottom: 32px; transition: color 0.2s;
 }
 .nav-link:hover { color: var(--light); }
+
 /* —— HERO —— (restored exactly so it clears the fixed header) */
 .hero { padding: 160px 0 100px; text-align: center; }
 .hero h1 { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 52px; letter-spacing: 0.04em; margin-bottom: 16px; line-height: 1.2; }
 .hero .subtitle { font-size: 11px; font-weight: 400; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 60px; }
 .hero-image-container { display: inline-block; max-width: 680px; margin: 0 auto; }
 .hero-image { width: 100%; height: auto; display: block; }
+
 /* —— GALLERY —— */
 .gallery-section { padding: 100px 0; }
 .section-heading { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 38px; letter-spacing: 0.04em; margin-bottom: 12px; text-align: center; }
@@ -75,6 +79,7 @@ body {
 .gallery-image { width: 100%; height: 100%; object-fit: contain; object-position: center; border-radius: 28px; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 .gallery-card:hover .gallery-image { transform: scale(1.06); }
 .gallery-description { font-size: 11px; font-weight: 300; letter-spacing: 0.05em; color: var(--mid); line-height: 1.7; margin-top: 12px; }
+
 /* —— VIDEOS —— (restored the 16:9 box) */
 .videos-section { padding: 100px 0; text-align: center; }
 .videos-section h2 { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 38px; letter-spacing: 0.04em; margin-bottom: 12px; }
@@ -86,14 +91,17 @@ body {
 .video-featured:hover .yt-thumb-wrap img { transform: scale(1.03); }
 .yt-play-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 52px; height: 52px; background: rgba(255,255,255,0.88); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--black); padding-left: 3px; transition: background 0.2s, transform 0.2s; }
 .video-featured:hover .yt-play-btn { background: rgba(255,255,255,1); transform: translate(-50%, -50%) scale(1.1); }
+
 /* —— FOOTER —— */
 .footer { background: var(--white); border-top: 1px solid var(--rule); color: var(--black); padding: 60px 0; text-align: center; }
+
 /* —— ROUNDED CORNERS —— */
 img { border-radius: 24px; overflow: hidden; }
 .logo-img { border-radius: 0; }
+
 /* ========================================================================
- SHOP — unified block (Option 3: inside-edge arrows + gutters)
- ===================================================================== */
+   SHOP — unified block (Option 3: inside-edge arrows + gutters)
+   ======================================================================== */
 .shop-section {
   padding: 64px 0 72px; /* tighter but consistent */
   text-align: center;
@@ -140,6 +148,7 @@ img { border-radius: 24px; overflow: hidden; }
 .shop-dots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
 .shop-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rule); border: none; cursor: pointer; transition: background .18s, transform .18s; }
 .shop-dot.active { background: var(--black); transform: scale(1.25); }
+
 /* —— LIGHTBOX —— (unchanged) */
 .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px) saturate(0.6); -webkit-backdrop-filter: blur(20px) saturate(0.6); z-index: 2000; justify-content: center; align-items: center; }
 .lightbox.active { display: flex; }
@@ -151,6 +160,7 @@ img { border-radius: 24px; overflow: hidden; }
 .lightbox-close { position: absolute; top: 28px; right: 40px; font-size: 28px; font-weight: 200; color: var(--black); background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; line-height: 1; }
 .lightbox-prev, .lightbox-next { position: absolute; top: 50%; transform: translateY(-50%); font-size: 20px; font-weight: 300; color: var(--black); background: none; border: none; cursor: pointer; padding: 20px; opacity: 0.5; transition: opacity 0.2s; }
 .lightbox-prev { left: 20px; } .lightbox-next { right: 20px; }
+
 /* —— RESPONSIVE —— */
 @media (max-width: 968px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; } }
 @media (max-width: 720px) {
@@ -165,7 +175,7 @@ img { border-radius: 24px; overflow: hidden; }
   .header.scrolled { padding: 6px 16px; }
   .logo-img { height: 90px; }
   .container { padding: 0 16px; }
-},
+}
 
 /* ---------------------------------------------------
    GALLERY CAROUSEL (new)
@@ -216,4 +226,16 @@ img { border-radius: 24px; overflow: hidden; }
 .gallery-dot.active {
   background: var(--black);
   transform: scale(1.25);
+}
+
+/* ── FORCE CLICKABILITY ON CAROUSEL ELEMENTS (added to fix non-first gallery clicks) ── */
+.gallery-carousel-wrap,
+.gallery-carousel,
+.gallery-slide,
+.gallery-category,
+.gallery-card {
+  pointer-events: auto !important;
+}
+.gallery-card {
+  cursor: pointer !important;
 }
