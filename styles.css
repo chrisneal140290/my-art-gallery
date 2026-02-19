@@ -27,7 +27,7 @@ body {
   position: fixed;
   top: 0; left: 0; right: 0;
   background: rgba(255,255,255,0.97);
-  padding: 10px 48px;
+  padding: 10px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -37,29 +37,28 @@ body {
 }
 
 .header.scrolled {
-  padding: 6px 48px;
+  padding: 6px 24px;
   box-shadow: 0 2px 20px rgba(0,0,0,0.07);
 }
 
-/* Logo container – centers the image better */
 .logo {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
+  justify-content: flex-start;
 }
 
-/* Larger logo image (+20%) */
 .logo-img {
-  height: 130px;               /* was 108px → +20% */
+  height: 130px;                /* ~20% larger than original 108px */
+  max-width: 260px;             /* safety cap so it doesn't explode on wide screens */
   width: auto;
   display: block;
   transition: height 0.4s ease;
 }
 
-/* Scrolled state - also larger */
 .header.scrolled .logo-img {
-  height: 83px;                /* was 69px → +20% */
+  height: 83px;                 /* ~20% larger than original 69px */
+  max-width: 166px;
 }
 
 .hamburger {
@@ -71,6 +70,7 @@ body {
   padding: 8px;
   gap: 5px;
   z-index: 1001;
+  margin-left: auto;
 }
 
 .hamburger span {
@@ -233,9 +233,9 @@ img {
 @media (max-width: 680px) {
   .hero h1 { font-size: 36px; }
   .gallery-grid { grid-template-columns: 1fr; }
-  .header { padding: 10px 24px; }
-  .header.scrolled { padding: 6px 24px; }
-  .logo-img { height: 86px; }          /* +20% from original mobile 72px */
-  .header.scrolled .logo-img { height: 58px; } /* +20% from 48px */
-  .container { padding: 0 24px; }
+  .header { padding: 10px 16px; }
+  .header.scrolled { padding: 6px 16px; }
+  .logo-img { height: 90px; max-width: 180px; }
+  .header.scrolled .logo-img { height: 60px; max-width: 120px; }
+  .container { padding: 0 16px; }
 }
