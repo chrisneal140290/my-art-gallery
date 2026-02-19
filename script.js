@@ -15,22 +15,33 @@ navLinks.forEach(link => {
   });
 });
 
-// —— GALLERY IMAGE LISTS (REPLACED) ————————————————————————————————
-// Folder-based loader: /images/<folder>/1..200 .png/.jpg
+// —— GALLERY IMAGE LISTS ———————————————————————————————————————————
 function loadGalleryImages(folder) {
   const list = [];
-  const maxImages = 20;           // adjust higher only if you have galleries >100 images
+  const maxImages = 20; // increase to 50–100 once confirmed working
   for (let i = 1; i <= maxImages; i++) {
     list.push(`images/${folder}/${i}.png`);
-    // Optional: also support 01.png, 001.png style if some folders use padding
+    // If some folders use 01.png etc., uncomment:
     // list.push(`images/${folder}/${String(i).padStart(2, '0')}.png`);
   }
   return list;
 }
+
 const galleryImages = {};
-document.querySelectorAll(".gallery-category").forEach(cat => {
-  const folder = cat.getAttribute("data-folder");
-  galleryImages[folder] = loadGalleryImages(folder);
+
+function populateGalleryImages() {
+  document.querySelectorAll(".gallery-category").forEach(cat => {
+    const folder = cat.getAttribute("data-folder");
+    if (folder && !galleryImages[folder]) {
+      galleryImages[folder] = loadGalleryImages(folder);
+      console.log(`Registered gallery folder: ${folder} with ${galleryImages[folder].length} potential images`);
+    }
+  });
+}
+
+// Run population after DOM ready + short delay (carousel needs time to layout)
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(populateGalleryImages, 300); // 300ms is usually enough
 });
 
 // —— DYNAMIC VIDEO LIST FROM CSV ————————————————————————————————————
@@ -44,17 +55,15 @@ async function loadVideosFromFolder() {
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
     const rows = text.replace(/\r\n?/g, '\n').trim().split('\n');
 
-    // Skip header if first row looks like it
     const dataRows = rows.length && /url|video/i.test(rows[0]) ? rows.slice(1) : rows;
 
     videoList = dataRows
       .map(row => {
         if (!row) return null;
-        const parts = row.split(/,(.+)/); // split into title, url
+        const parts = row.split(/,(.+)/);
         if (!parts || parts.length < 2) return null;
         const title = parts[0].trim().replace(/^"(.+)"$/, '$1');
         const url = parts[1].trim().replace(/^"(.+)"$/, '$1');
-        // watch?v=, youtu.be/, or embed/
         const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
         const id = m ? m[1] : null;
         return id ? { id, title } : null;
@@ -68,7 +77,6 @@ async function loadVideosFromFolder() {
   }
   return videoList.length;
 }
-// Load videos ASAP
 loadVideosFromFolder();
 
 // —— LIGHTBOX ELEMENTS ——————————————————————————————————————————————
@@ -83,25 +91,31 @@ let lbMode = 'image';
 let currentList = [];
 let currentIndex = 0;
 
-// —— IMAGE LIGHTBOX (UPDATED CLICK HANDLER) ————————————————————————
-document.querySelectorAll('.gallery-category').forEach(category => {
-  category.addEventListener('click', () => {
-    const folder = category.getAttribute('data-folder');
-    lbMode = 'image';
-    currentList = galleryImages[folder] || [];
-    currentIndex = 0;
+// —— IMAGE LIGHTBOX – USE EVENT DELEGATION FOR CLICKS ———————————————
+document.addEventListener('click', function(e) {
+  const category = e.target.closest('.gallery-category');
+  if (!category) return;
 
-    if (lightboxImg) lightboxImg.style.display = 'block';
-    lightboxVideo?.classList.remove('active');
-    if (lightboxIframe) lightboxIframe.src = '';
-    if (lightboxPrev) lightboxPrev.style.display = 'block';
-    if (lightboxNext) lightboxNext.style.display = 'block';
-    openImageAt(0);
-  });
+  const folder = category.getAttribute('data-folder');
+  console.log(`Clicked gallery: ${folder} | Images preloaded: ${galleryImages[folder]?.length || 0}`);
+
+  lbMode = 'image';
+  currentList = galleryImages[folder] || [];
+  currentIndex = 0;
+
+  if (lightboxImg) lightboxImg.style.display = 'block';
+  lightboxVideo?.classList.remove('active');
+  if (lightboxIframe) lightboxIframe.src = '';
+  if (lightboxPrev) lightboxPrev.style.display = 'block';
+  if (lightboxNext) lightboxNext.style.display = 'block';
+  openImageAt(0);
 });
 
 function openImageAt(index) {
-  if (!lightbox || !lightboxImg || currentList.length === 0) return;
+  if (!lightbox || !lightboxImg || currentList.length === 0) {
+    console.warn('Lightbox or currentList empty – cannot open image');
+    return;
+  }
   lightboxImg.src = currentList[index];
   lightboxImg.onerror = function () {
     this.onerror = null;
@@ -115,7 +129,10 @@ function stepImage(index, direction) {
   let attempts = 0;
   const total = currentList.length;
   function tryIndex(i) {
-    if (attempts >= total) return;
+    if (attempts >= total) {
+      console.warn('No valid image found after cycling through list');
+      return;
+    }
     attempts++;
     i = ((i % total) + total) % total;
     currentIndex = i;
@@ -131,7 +148,6 @@ function stepImage(index, direction) {
 // —— VIDEO LIGHTBOX ————————————————————————————————————————————————
 const videoFeatured = document.getElementById('videoFeatured');
 videoFeatured?.addEventListener('click', async () => {
-  // If clicked before CSV load finishes, try once and continue
   if (!videoList.length) {
     const count = await loadVideosFromFolder();
     if (!count) {
@@ -269,7 +285,6 @@ lightbox?.addEventListener('wheel', (e) => {
   prevBtn.addEventListener('click', () => goTo(current - 1));
   nextBtn.addEventListener('click', () => goTo(current + 1));
 
-  // Touch swipe for carousel
   let tx = 0;
   carousel.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; }, { passive: true });
   carousel.addEventListener('touchend', e => {
@@ -298,9 +313,7 @@ window.addEventListener('scroll', () => {
   else header.classList.remove('scrolled');
 }, { passive: true });
 
-/* -------------------------------------------------------
-   GALLERY CAROUSEL (new)
-------------------------------------------------------- */
+// —— GALLERY CAROUSEL ———————————————————————————————————————————
 (function () {
   const carousel = document.getElementById('galleryCarousel');
   const prevBtn = document.querySelector('.gallery-arrow--prev');
@@ -339,7 +352,6 @@ window.addEventListener('scroll', () => {
   prevBtn.addEventListener("click", () => goTo(current - 1));
   nextBtn.addEventListener("click", () => goTo(current + 1));
 
-  // Touch swipe
   let touchX = 0;
   carousel.addEventListener("touchstart", e => {
     touchX = e.changedTouches[0].screenX;
