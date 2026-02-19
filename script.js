@@ -222,3 +222,29 @@ window.addEventListener('scroll', () => {
         header.classList.remove('scrolled');
     }
 }, { passive: true });
+// ── TRACKPAD / MOUSE WHEEL SWIPE SUPPORT (two-finger horizontal swipe) ──────────
+lightbox.addEventListener('wheel', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+
+    // Only react to horizontal movement (trackpad two-finger left/right swipe)
+    // Ignore vertical scrolling (normal mouse wheel / trackpad up-down)
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 20) {
+        e.preventDefault(); // prevent page scroll while in lightbox
+
+        if (e.deltaX > 0) {
+            // Swipe left → next image/video
+            if (lbMode === 'image') {
+                stepImage(currentIndex + 1, +1);
+            } else {
+                stepVideo(+1);
+            }
+        } else if (e.deltaX < 0) {
+            // Swipe right → previous image/video
+            if (lbMode === 'image') {
+                stepImage(currentIndex - 1, -1);
+            } else {
+                stepVideo(-1);
+            }
+        }
+    }
+}, { passive: false });  // passive: false is needed so we can call e.preventDefault()
