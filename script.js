@@ -43,7 +43,7 @@ async function loadVideosFromFolder() {
         // We'll try fetching a few likely names, or use a fixed one if you prefer.
 
         // Option A: fixed name (simplest if upload script always uses same name)
-        // let csvUrl = 'videos/videos.csv';
+        // let csvUrl = 'videos/mariewatson3371.csv';
 
         // Option B: dynamic — try to guess / fetch the only .csv (requires server listing or known pattern)
         // Since GitHub Pages doesn't give directory listing easily, best is:
@@ -51,7 +51,7 @@ async function loadVideosFromFolder() {
         // 2. Or use a known pattern like latest timestamp
 
         // Recommended: fixed name + upload script overwrites 'videos.csv'
-        const csvUrl = 'videos/videos.csv';  // ← change if your script uses different fixed name
+        const csvUrl = 'videos/mariewatson3371.csv';  // ← change if your script uses different fixed name
 
         const response = await fetch(csvUrl);
         if (!response.ok) {
