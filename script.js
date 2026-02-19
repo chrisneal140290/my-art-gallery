@@ -248,6 +248,62 @@ lightbox.addEventListener('wheel', (e) => {
     }
 }, { passive: false });
 
+// ── SHOP CAROUSEL ─────────────────────────────────────────────────────────────
+(function () {
+    const carousel = document.getElementById('shopCarousel');
+    const prevBtn  = document.getElementById('shopPrev');
+    const nextBtn  = document.getElementById('shopNext');
+    const dotsWrap = document.getElementById('shopDots');
+    if (!carousel) return;
+
+    let current = 0;
+    const slides = () => Array.from(carousel.querySelectorAll('.shop-slide'));
+
+    function buildDots() {
+        dotsWrap.innerHTML = '';
+        slides().forEach((_, i) => {
+            const d = document.createElement('button');
+            d.className = 'shop-dot' + (i === 0 ? ' active' : '');
+            d.setAttribute('aria-label', 'Product ' + (i + 1));
+            d.addEventListener('click', () => goTo(i));
+            dotsWrap.appendChild(d);
+        });
+    }
+
+    function updateDots() {
+        dotsWrap.querySelectorAll('.shop-dot').forEach((d, i) => {
+            d.classList.toggle('active', i === current);
+        });
+    }
+
+    function updateArrows() {
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === slides().length - 1;
+    }
+
+    function goTo(index) {
+        current = Math.max(0, Math.min(index, slides().length - 1));
+        carousel.style.transform = 'translateX(-' + (current * 100) + '%)';
+        carousel.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
+        updateDots();
+        updateArrows();
+    }
+
+    prevBtn.addEventListener('click', () => goTo(current - 1));
+    nextBtn.addEventListener('click', () => goTo(current + 1));
+
+    // Touch swipe
+    let tx = 0;
+    carousel.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; }, { passive: true });
+    carousel.addEventListener('touchend', e => {
+        const diff = tx - e.changedTouches[0].screenX;
+        if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+    }, { passive: true });
+
+    buildDots();
+    updateArrows();
+})();
+
 // ── SMOOTH SCROLL ─────────────────────────────────────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
