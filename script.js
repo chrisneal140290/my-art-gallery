@@ -116,7 +116,8 @@ function openVideoAt(index) {
     lightboxImg.style.display = 'none';
     lightboxImg.src = '';
     lightboxVideo.classList.add('active');
-    lightboxIframe.src = `https://www.youtube.com/embed/${videoList[index].id}?autoplay=1`;
+    // Updated for better autoplay support on mobile (mute required for reliability)
+    lightboxIframe.src = `https://www.youtube.com/embed/${videoList[index].id}?autoplay=1&mute=1&playsinline=1`;
     lightboxPrev.style.display = 'block';
     lightboxNext.style.display = 'block';
 
@@ -163,6 +164,44 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft')  lbMode === 'image' ? stepImage(currentIndex - 1, -1) : stepVideo(-1);
     if (e.key === 'ArrowRight') lbMode === 'image' ? stepImage(currentIndex + 1, +1) : stepVideo(+1);
 });
+
+// ── TOUCH SWIPE FOR LIGHTBOX (images & videos) ────────────────────────────────
+let touchStartX = 0;
+let touchEndX = 0;
+const swipeThreshold = 60; // pixels — adjust if too sensitive or not sensitive enough
+
+lightbox.addEventListener('touchstart', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+    touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+lightbox.addEventListener('touchend', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+    touchEndX = e.changedTouches[0].screenX;
+
+    const diff = touchStartX - touchEndX;
+
+    // Swipe left → next
+    if (diff > swipeThreshold) {
+        if (lbMode === 'image') {
+            stepImage(currentIndex + 1, +1);
+        } else {
+            stepVideo(+1);
+        }
+    }
+    // Swipe right → previous
+    else if (diff < -swipeThreshold) {
+        if (lbMode === 'image') {
+            stepImage(currentIndex - 1, -1);
+        } else {
+            stepVideo(-1);
+        }
+    }
+
+    // Reset for next swipe
+    touchStartX = 0;
+    touchEndX = 0;
+}, { passive: true });
 
 // ── SMOOTH SCROLL ─────────────────────────────────────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
