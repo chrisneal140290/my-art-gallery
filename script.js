@@ -18,7 +18,7 @@ navLinks.forEach(link => {
 // —— GALLERY IMAGE LISTS (manifest-driven) ————————————————————————
 // Each image folder contains a manifest.json listing exactly which files exist.
 // This avoids blind 1-20 probing and eliminates failed fetches for missing images.
-// Format: { "images": ["1.png", "2.png", "3.png", ...] }
+// Format: { "images": ["1.jpg", "2.jpg", "3.jpg", ...] }
 // Generate with the included generate-manifests.js (run once after uploading images).
 
 const galleryImages = {};
@@ -36,7 +36,7 @@ async function loadManifest(folder) {
     // while you haven't yet generated manifests. Remove fallback once manifests exist.
     console.warn(`[gallery] No manifest for "${folder}", using probe fallback:`, err.message);
     galleryImages[folder] = [];
-    for (let i = 1; i <= 40; i++) galleryImages[folder].push(`images/${folder}/${i}.png`);
+    for (let i = 1; i <= 40; i++) galleryImages[folder].push(`images/${folder}/${i}.jpg`);
   }
 }
 
