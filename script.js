@@ -15,34 +15,41 @@ navLinks.forEach(link => {
   });
 });
 
-// —— GALLERY IMAGE LISTS ———————————————————————————————————————————
-function loadGalleryImages(folder) {
-  const list = [];
-  const maxImages = 20; // increase to 50–100 once confirmed working
-  for (let i = 1; i <= maxImages; i++) {
-    list.push(`images/${folder}/${i}.png`);
-    // If some folders use 01.png etc., uncomment:
-    // list.push(`images/${folder}/${String(i).padStart(2, '0')}.png`);
-  }
-  return list;
-}
+// —— GALLERY IMAGE LISTS (manifest-driven) ————————————————————————
+// Each image folder contains a manifest.json listing exactly which files exist.
+// This avoids blind 1-20 probing and eliminates failed fetches for missing images.
+// Format: { "images": ["1.png", "2.png", "3.png", ...] }
+// Generate with the included generate-manifests.js (run once after uploading images).
 
 const galleryImages = {};
 
-function populateGalleryImages() {
-  document.querySelectorAll(".gallery-category").forEach(cat => {
-    const folder = cat.getAttribute("data-folder");
-    if (folder && !galleryImages[folder]) {
-      galleryImages[folder] = loadGalleryImages(folder);
-      console.log(`Registered gallery folder: ${folder} with ${galleryImages[folder].length} potential images`);
-    }
-  });
+async function loadManifest(folder) {
+  try {
+    const res = await fetch(`images/${folder}/manifest.json`, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const files = Array.isArray(data.images) ? data.images : [];
+    galleryImages[folder] = files.map(f => `images/${folder}/${f}`);
+    console.log(`[gallery] ${folder}: ${galleryImages[folder].length} images from manifest`);
+  } catch (err) {
+    // Manifest missing — fall back to probing 1–40 so the gallery still works
+    // while you haven't yet generated manifests. Remove fallback once manifests exist.
+    console.warn(`[gallery] No manifest for "${folder}", using probe fallback:`, err.message);
+    galleryImages[folder] = [];
+    for (let i = 1; i <= 40; i++) galleryImages[folder].push(`images/${folder}/${i}.png`);
+  }
 }
 
-// Run population after DOM ready + short delay (carousel needs time to layout)
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(populateGalleryImages, 300); // 300ms is usually enough
-});
+async function populateGalleryImages() {
+  const folders = [...new Set(
+    [...document.querySelectorAll('.gallery-category')]
+      .map(c => c.getAttribute('data-folder'))
+      .filter(Boolean)
+  )];
+  await Promise.all(folders.map(loadManifest));
+}
+
+document.addEventListener('DOMContentLoaded', populateGalleryImages);
 
 // —— DYNAMIC VIDEO LIST FROM CSV ————————————————————————————————————
 // CSV columns expected: "Name (Title)", "Video URL"
@@ -152,7 +159,10 @@ function openImageAt(index) {
     this.onerror = null;
     stepImage(index + 1, +1);
   };
+  lightbox.classList.remove('visible');
   lightbox.classList.add('active');
+  // Small delay lets browser paint display:flex before opacity transition fires
+  setTimeout(() => lightbox.classList.add('visible'), 20);
   document.body.style.overflow = 'hidden';
 }
 
@@ -167,12 +177,17 @@ function stepImage(index, direction) {
     attempts++;
     i = ((i % total) + total) % total;
     currentIndex = i;
-    lightboxImg.onerror = function () {
-      this.onerror = null;
-      tryIndex(i + direction);
-    };
-    console.log('Stepping to image:', currentList[i]); // debug
-    lightboxImg.src = currentList[i];
+    // Cross-fade: fade out, swap, fade in
+    lightboxImg.style.opacity = '0';
+    setTimeout(() => {
+      lightboxImg.onerror = function () {
+        this.onerror = null;
+        lightboxImg.style.opacity = '1';
+        tryIndex(i + direction);
+      };
+      lightboxImg.src = currentList[i];
+      lightboxImg.onload = () => { lightboxImg.style.opacity = '1'; };
+    }, 280);
   }
   tryIndex(index);
 }
@@ -217,7 +232,9 @@ function openVideoAt(index) {
   }
   if (lightboxPrev) lightboxPrev.style.display = 'block';
   if (lightboxNext) lightboxNext.style.display = 'block';
+  lightbox?.classList.remove('visible');
   lightbox?.classList.add('active');
+  setTimeout(() => lightbox?.classList.add('visible'), 20);
   document.body.style.overflow = 'hidden';
 }
 
@@ -231,14 +248,18 @@ function stepVideo(direction) {
 
 // —— CLOSE ————————————————————————————————————————————————————————
 function closeLightbox() {
-  lightbox?.classList.remove('active');
-  if (lightboxIframe) lightboxIframe.src = '';
-  if (lightboxImg) lightboxImg.src = '';
-  lightboxVideo?.classList.remove('active');
-  if (lightboxImg) lightboxImg.style.display = 'block';
-  if (lightboxPrev) lightboxPrev.style.display = 'block';
-  if (lightboxNext) lightboxNext.style.display = 'block';
-  document.body.style.overflow = 'auto';
+  if (!lightbox?.classList.contains('active')) return;
+  lightbox.classList.remove('visible');
+  setTimeout(() => {
+    lightbox?.classList.remove('active');
+    if (lightboxIframe) lightboxIframe.src = '';
+    if (lightboxImg) lightboxImg.src = '';
+    lightboxVideo?.classList.remove('active');
+    if (lightboxImg) lightboxImg.style.display = 'block';
+    if (lightboxPrev) lightboxPrev.style.display = 'block';
+    if (lightboxNext) lightboxNext.style.display = 'block';
+    document.body.style.overflow = 'auto';
+  }, 320);
 }
 lightboxClose?.addEventListener('click', closeLightbox);
 lightbox?.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
@@ -259,21 +280,35 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') lbMode === 'image' ? stepImage(currentIndex + 1, +1) : stepVideo(+1);
 });
 
-// —— TOUCH SWIPE FOR LIGHTBOX ————————————————————————————————————
-let touchStartX = 0;
-let touchEndX = 0;
-const swipeThreshold = 60;
+// —— TOUCH SWIPE FOR LIGHTBOX (velocity + distance gated) ————————
+let lbTouchStartX = 0;
+let lbTouchStartY = 0;
+let lbTouchStartTime = 0;
+let lbSwipeLocked = false;
+
 lightbox?.addEventListener('touchstart', (e) => {
   if (!lightbox.classList.contains('active')) return;
-  touchStartX = e.changedTouches[0].screenX;
+  lbTouchStartX    = e.changedTouches[0].clientX;
+  lbTouchStartY    = e.changedTouches[0].clientY;
+  lbTouchStartTime = Date.now();
 }, { passive: true });
+
 lightbox?.addEventListener('touchend', (e) => {
-  if (!lightbox.classList.contains('active')) return;
-  touchEndX = e.changedTouches[0].screenX;
-  const diff = touchStartX - touchEndX;
-  if (diff > swipeThreshold) { if (lbMode === 'image') stepImage(currentIndex + 1, +1); else stepVideo(+1); }
-  else if (diff < -swipeThreshold) { if (lbMode === 'image') stepImage(currentIndex - 1, -1); else stepVideo(-1); }
-  touchStartX = 0; touchEndX = 0;
+  if (!lightbox.classList.contains('active') || lbSwipeLocked) return;
+  const dx       = e.changedTouches[0].clientX - lbTouchStartX;
+  const dy       = e.changedTouches[0].clientY - lbTouchStartY;
+  const elapsed  = Date.now() - lbTouchStartTime;
+  const velocity = Math.abs(dx) / elapsed; // px/ms
+
+  // Reject: vertical scroll, too slow, too short
+  if (Math.abs(dy) > Math.abs(dx) * 0.8) return;   // mostly vertical
+  if (Math.abs(dx) < 60 && velocity < 0.4) return;  // too short AND too slow
+
+  lbSwipeLocked = true;
+  setTimeout(() => { lbSwipeLocked = false; }, 400);
+
+  if (dx < 0) { if (lbMode === 'image') stepImage(currentIndex + 1, +1); else stepVideo(+1); }
+  else        { if (lbMode === 'image') stepImage(currentIndex - 1, -1); else stepVideo(-1); }
 }, { passive: true });
 
 // —— TRACKPAD TWO-FINGER HORIZONTAL SWIPE (wheel event) ———————————
@@ -328,12 +363,40 @@ lightbox?.addEventListener('wheel', (e) => {
   }
   prevBtn.addEventListener('click', () => goTo(current - 1));
   nextBtn.addEventListener('click', () => goTo(current + 1));
-  let tx = 0;
-  carousel.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; }, { passive: true });
-  carousel.addEventListener('touchend', e => {
-    const diff = tx - e.changedTouches[0].screenX;
-    if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+  let scTouchStartX = 0, scTouchStartY = 0, scTouchTime = 0, scSwipeLocked = false;
+  carousel.addEventListener('touchstart', e => {
+    scTouchStartX = e.changedTouches[0].clientX;
+    scTouchStartY = e.changedTouches[0].clientY;
+    scTouchTime   = Date.now();
   }, { passive: true });
+  carousel.addEventListener('touchend', e => {
+    if (scSwipeLocked) return;
+    const dx       = e.changedTouches[0].clientX - scTouchStartX;
+    const dy       = e.changedTouches[0].clientY - scTouchStartY;
+    const elapsed  = Date.now() - scTouchTime;
+    const velocity = Math.abs(dx) / elapsed;
+    if (Math.abs(dy) > Math.abs(dx) * 0.8) return;
+    if (Math.abs(dx) < 55 && velocity < 0.45) return;
+    scSwipeLocked = true;
+    setTimeout(() => { scSwipeLocked = false; }, 450);
+    goTo(current + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+
+  // Trackpad two-finger horizontal scroll
+  let scWheelLocked = false;
+  carousel.addEventListener('wheel', (e) => {
+    const absX = Math.abs(e.deltaX);
+    const absY = Math.abs(e.deltaY);
+    if (absX > absY * 1.2 && absX > 10) {
+      e.preventDefault();
+      if (scWheelLocked) return;
+      scWheelLocked = true;
+      setTimeout(() => { scWheelLocked = false; }, 500);
+      if (e.deltaX > 0) goTo(current + 1);
+      else              goTo(current - 1);
+    }
+  }, { passive: false });
+
   buildDots();
   updateArrows();
 })();
@@ -419,14 +482,41 @@ window.addEventListener('scroll', () => {
     }, 150);
   });
 
-  let touchX = 0;
+  let gcTouchStartX = 0, gcTouchStartY = 0, gcTouchTime = 0, gcSwipeLocked = false;
   carousel.addEventListener("touchstart", e => {
-    touchX = e.changedTouches[0].screenX;
+    gcTouchStartX = e.changedTouches[0].clientX;
+    gcTouchStartY = e.changedTouches[0].clientY;
+    gcTouchTime   = Date.now();
   }, { passive: true });
   carousel.addEventListener("touchend", e => {
-    const diff = touchX - e.changedTouches[0].screenX;
-    if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+    if (gcSwipeLocked) return;
+    const dx       = e.changedTouches[0].clientX - gcTouchStartX;
+    const dy       = e.changedTouches[0].clientY - gcTouchStartY;
+    const elapsed  = Date.now() - gcTouchTime;
+    const velocity = Math.abs(dx) / elapsed;
+    // Must be predominantly horizontal AND (long enough OR fast enough)
+    if (Math.abs(dy) > Math.abs(dx) * 0.8) return;
+    if (Math.abs(dx) < 55 && velocity < 0.45) return;
+    gcSwipeLocked = true;
+    setTimeout(() => { gcSwipeLocked = false; }, 450);
+    if (dx < 0) goTo(current + 1);
+    else        goTo(current - 1);
   }, { passive: true });
+
+  // Trackpad two-finger horizontal scroll
+  let gcWheelLocked = false;
+  carousel.addEventListener('wheel', (e) => {
+    const absX = Math.abs(e.deltaX);
+    const absY = Math.abs(e.deltaY);
+    if (absX > absY * 1.2 && absX > 10) {
+      e.preventDefault();
+      if (gcWheelLocked) return;
+      gcWheelLocked = true;
+      setTimeout(() => { gcWheelLocked = false; }, 500);
+      if (e.deltaX > 0) goTo(current + 1);
+      else              goTo(current - 1);
+    }
+  }, { passive: false });
 
   buildDots();
   updateArrows();
