@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About – Motha Maker</title>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css">
+
+    <!-- Root‑absolute CSS + Icons -->
+    <link rel="stylesheet" href="/styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+
     <style>
         /* ── ABOUT PAGE SPECIFIC ── */
         .about-section {
@@ -88,21 +93,23 @@
     <!-- Header / Navigation -->
     <header class="header">
         <div class="logo">
-            <a href="index.html">
-                <img src="images/logo.png" alt="Motha Maker Logo" class="logo-img">
+            <a href="/">
+                <img src="/images/logo.png" alt="Motha Maker Logo" class="logo-img">
             </a>
         </div>
+
         <button class="hamburger" id="hamburger">
             <span></span>
             <span></span>
             <span></span>
         </button>
+
         <nav class="nav-menu" id="navMenu">
-  <a href="/#gallery" class="nav-link">Gallery</a>
-  <a href="/#videos" class="nav-link">Videos</a>
-  <a href="/#shop" class="nav-link">Shop</a>
-  <a href="/about" class="nav-link">About</a>
-</nav>
+            <a href="/#gallery" class="nav-link">Gallery</a>
+            <a href="/#videos" class="nav-link">Videos</a>
+            <a href="/#shop" class="nav-link">Shop</a>
+            <a href="/about" class="nav-link">About</a>
+        </nav>
     </header>
 
     <!-- About Section -->
@@ -111,15 +118,18 @@
             <div class="about-inner">
 
                 <div class="about-image-wrap">
-                    <img src="images/me.png" alt="Marie Neal">
+                    <img src="/images/me.png" alt="Marie Neal">
                 </div>
 
                 <div class="about-text">
                     <h1>About Me</h1>
-                    <span class="about-subtitle">The artist behind Motha & Maker</span>
+                    <span class="about-subtitle">The artist behind Motha &amp; Maker</span>
                     <div class="about-rule"></div>
+
                     <p>Welcome. I'm Marie — a digital artist based in the UK, creating hand-drawn illustrations one careful line at a time. No AI generators, no shortcuts. Just a stylus, a screen, and a lot of patience.</p>
+
                     <p>My work spans food and drink illustration, wildlife and nature, and most recently a series dedicated to the 2026 Winter Olympics — capturing the speed, grace, and raw determination of the athletes competing on the world stage.</p>
+
                     <p>Every piece starts with the same thing: a genuine love of drawing. That instinct to look closely at the world and find the visual story worth telling. I hope you find something here that resonates.</p>
                 </div>
 
@@ -131,6 +141,7 @@
     <footer class="footer" id="about-footer">
         <div class="container">
             <p class="copyright">&copy; 2026 All artwork and content &copy; Marie Neal</p>
+
             <div class="social-links">
                 <a href="https://www.instagram.com/mothaandmaker" target="_blank" class="social-link" aria-label="Instagram">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -138,12 +149,14 @@
                     </svg>
                     <span>Instagram</span>
                 </a>
+
                 <a href="https://www.youtube.com/@MothaandMaker" target="_blank" class="social-link" aria-label="YouTube">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                     </svg>
                     <span>YouTube</span>
                 </a>
+
                 <a href="https://www.facebook.com/people/Motha-Maker/61579338660267" target="_blank" class="social-link" aria-label="Facebook">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
@@ -154,28 +167,28 @@
         </div>
     </footer>
 
+    <!-- Inline JS (same as homepage, works anywhere) -->
     <script>
-    // Hamburger menu (same as main site)
-    const hamburger = document.getElementById('hamburger');
-    const navMenu   = document.getElementById('navMenu');
-    const navLinks  = document.querySelectorAll('.nav-link');
+        const hamburger = document.getElementById('hamburger');
+        const navMenu   = document.getElementById('navMenu');
+        const navLinks  = document.querySelectorAll('.nav-link');
 
-    hamburger.addEventListener('click', () => {
-        hamburger.classList.toggle('active');
-        navMenu.classList.toggle('active');
-    });
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('active');
-            navMenu.classList.remove('active');
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
         });
-    });
 
-    // Shrinking header on scroll
-    const header = document.querySelector('.header');
-    window.addEventListener('scroll', () => {
-        header.classList.toggle('scrolled', window.scrollY > 60);
-    }, { passive: true });
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+            });
+        });
+
+        const header = document.querySelector('.header');
+        window.addEventListener('scroll', () => {
+            header.classList.toggle('scrolled', window.scrollY > 60);
+        }, { passive: true });
     </script>
 
 </body>
