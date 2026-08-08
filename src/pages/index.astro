@@ -1,6 +1,7 @@
 ---
 import { getImage, Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
+import { SHOP_ENABLED } from '../config';
 import sunflower from '../assets/sunflower.jpg';
 import csvFile from '../data/mariewatson3371.csv?raw';
 
@@ -133,20 +134,22 @@ const videos = csvRaw
     </div>
   </section>
 
-  <!-- Shop -->
-  <section class="shop-section" id="shop">
-    <div class="container">
-      <h2 class="section-heading">Shop</h2>
-      <div class="heading-rule"></div>
-      <p class="section-description">Original digital prints, available to own</p>
-      <div class="shop-grid">
-        <div class="shop-card gloss reveal"><div id="product-component-1771500370858"></div></div>
-        <div class="shop-card gloss reveal"><div id="product-component-1771500230986"></div></div>
-        <div class="shop-card gloss reveal"><div id="product-component-1771500327973"></div></div>
-        <div class="shop-card gloss reveal"><div id="product-component-1771500303747"></div></div>
+  <!-- Shop (hidden via SHOP_ENABLED while the Shopify store is suspended) -->
+  {SHOP_ENABLED && (
+    <section class="shop-section" id="shop">
+      <div class="container">
+        <h2 class="section-heading">Shop</h2>
+        <div class="heading-rule"></div>
+        <p class="section-description">Original digital prints, available to own</p>
+        <div class="shop-grid">
+          <div class="shop-card gloss reveal"><div id="product-component-1771500370858"></div></div>
+          <div class="shop-card gloss reveal"><div id="product-component-1771500230986"></div></div>
+          <div class="shop-card gloss reveal"><div id="product-component-1771500327973"></div></div>
+          <div class="shop-card gloss reveal"><div id="product-component-1771500303747"></div></div>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  )}
 
   <!-- Videos -->
   <section class="videos-section" id="videos">
@@ -327,7 +330,7 @@ const videos = csvRaw
   </script>
 
   <!-- Shopify Buy-Button embeds -->
-  <script is:inline>
+  {SHOP_ENABLED && <script is:inline>
     (function () {
       var scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
       var products = [
@@ -363,5 +366,5 @@ const videos = csvRaw
         });
       }
     })();
-  </script>
+  </script>}
 </Base>
