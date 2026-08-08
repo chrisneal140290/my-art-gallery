@@ -1,0 +1,187 @@
+---
+import { getImage, Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import sunflower from '../assets/sunflower.jpg';
+import csvFile from '../data/mariewatson3371.csv?raw';
+
+// ── Galleries: same nine categories, same wording ─────────────────
+const galleries = [
+  { title: 'Animals', folder: 'Animals', desc: 'Animal illustrations full of character.' },
+  { title: 'Daily Prompts', folder: 'Misc', desc: 'A selection of work created through daily prompts and creative exercises.' },
+  { title: 'Birds', folder: 'Birds', desc: 'Inspired by Birds.' },
+  { title: 'Food', folder: 'Food', desc: 'Delicious digital treats.' },
+  { title: 'Nature Echoes', folder: 'NatureEchoes', desc: 'Atmospheric nature‑themed artwork.' },
+  { title: 'Plants', folder: 'Plants', desc: 'Greenery in bold artistic form.' },
+  { title: 'Sunflowers', folder: 'Sunflowers', desc: 'Iconic sunflower studies.' },
+  { title: 'Winter Olympics 2026', folder: 'WinterOlympics2026', desc: 'My highlights of the Winter Olympics.' },
+  { title: 'Christmas', folder: 'Christmas', desc: 'Festive seasonal illustrations.' },
+];
+
+// Discover every artwork at build time — no manifests, no probing
+const modules = import.meta.glob<{ default: ImageMetadata }>(
+  '../assets/galleries/**/*.{jpg,jpeg,png,webp,gif}',
+  { eager: true }
+);
+
+const byFolder: Record<string, { name: string; img: ImageMetadata }[]> = {};
+for (const [path, mod] of Object.entries(modules)) {
+  const m = path.match(/galleries\/([^/]+)\/([^/]+)$/);
+  if (!m) continue;
+  (byFolder[m[1]] ??= []).push({ name: m[2], img: mod.default });
+}
+for (const list of Object.values(byFolder)) {
+  list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+// Optimized variants: card covers + full-size lightbox images
+const galleryCards = await Promise.all(
+  galleries.map(async (g) => {
+    const files = byFolder[g.folder] ?? [];
+    const cover = files.length
+      ? await getImage({ src: files[0].img, width: 900, format: 'webp', quality: 80 })
+      : null;
+    const fulls = await Promise.all(
+      files.map((f) => getImage({ src: f.img, width: 1600, format: 'webp', quality: 82 }))
+    );
+    return { ...g, cover, count: files.length, fulls: fulls.map((f) => f.src) };
+  })
+);
+
+const lightboxData = Object.fromEntries(galleryCards.map((g) => [g.folder, g.fulls]));
+
+// ── Videos: parsed from the same CSV at build time ────────────────
+const csvRaw = csvFile.replace(/^﻿/, '');
+const videos = csvRaw
+  .split(/\r?\n/)
+  .slice(1)
+  .map((line) => line.match(/^"(.*)","(.*)"$/))
+  .filter((m): m is RegExpMatchArray => !!m)
+  .map((m) => {
+    const idMatch = m[2].match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+    return idMatch ? { title: m[1], id: idMatch[1] } : null;
+  })
+  .filter((v): v is { title: string; id: string } => !!v);
+---
+
+<Base title="Motha Maker - Art Gallery">
+  <!-- Hero -->
+  <section class="hero" id="home">
+    <div class="container">
+      <h1>Digital art, made by a <em>human hand</em></h1>
+      <p class="subtitle">No shortcuts. No generators. Just authentic, human-made art</p>
+      <div class="hero-frame gloss">
+        <Image src={sunflower} alt="Sunflower artwork" width={900} quality={82} format="webp" loading="eager" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Galleries -->
+  <section class="gallery-section" id="gallery">
+    <div class="container">
+      <h2 class="section-heading">Galleries</h2>
+      <div class="heading-rule"></div>
+      <div class="gallery-grid">
+        {galleryCards.map((g) => (
+          <div class="gallery-category gloss reveal" data-folder={g.folder}>
+            <div class="gallery-card">
+              {g.cover && (
+                <img
+                  src={g.cover.src}
+                  alt={`${g.title} gallery preview`}
+                  class="gallery-image"
+                  width={g.cover.attributes.width}
+                  height={g.cover.attributes.height}
+                  loading="lazy"
+                />
+              )}
+            </div>
+            <div class="gallery-meta">
+              <h3>{g.title}</h3>
+              <p class="gallery-description">{g.desc}</p>
+              <span class="gallery-count">{g.count} pieces</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Shop -->
+  <section class="shop-section" id="shop">
+    <div class="container">
+      <h2 class="section-heading">Shop</h2>
+      <div class="heading-rule"></div>
+      <p class="section-description">Original digital prints, available to own</p>
+      <div class="shop-grid">
+        <div class="shop-card gloss reveal"><div id="product-component-1771500370858"></div></div>
+        <div class="shop-card gloss reveal"><div id="product-component-1771500230986"></div></div>
+        <div class="shop-card gloss reveal"><div id="product-component-1771500327973"></div></div>
+        <div class="shop-card gloss reveal"><div id="product-component-1771500303747"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Videos -->
+  <section class="videos-section" id="videos">
+    <div class="container">
+      <h2 class="section-heading">In Motion</h2>
+      <div class="heading-rule"></div>
+      <p class="section-description">Time-lapse of my work.</p>
+      <div class="video-list" id="videoList">
+        {videos.map((video, i) => (
+          <div class="video-list-item reveal" data-video-id={video.id}>
+            <div class="video-list-play">
+              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 5.14v13.72L19 12 8 5.14z" />
+              </svg>
+            </div>
+            <span class="video-list-title">{video.title}</span>
+            <span class="video-list-num">{String(i + 1).padStart(2, '0')}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Lightbox image data (built at compile time) -->
+  <script type="application/json" id="gallery-data" set:html={JSON.stringify(lightboxData)} />
+
+  <!-- Shopify Buy-Button embeds -->
+  <script is:inline>
+    (function () {
+      var scriptURL = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+      var products = [
+        { id: '15619391193462', node: 'product-component-1771500370858' },
+        { id: '15619422617974', node: 'product-component-1771500230986' },
+        { id: '15619426550134', node: 'product-component-1771500327973' },
+        { id: '15619424158070', node: 'product-component-1771500303747' }
+      ];
+      if (window.ShopifyBuy) {
+        if (window.ShopifyBuy.UI) { ShopifyBuyInit(); } else { loadScript(); }
+      } else { loadScript(); }
+      function loadScript() {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = scriptURL;
+        (document.head || document.body).appendChild(s);
+        s.onload = ShopifyBuyInit;
+      }
+      function ShopifyBuyInit() {
+        var client = ShopifyBuy.buildClient({
+          domain: 'wr18gc-jx.myshopify.com',
+          storefrontAccessToken: 'e4fcf237310b8885d740dfad2d7c649a'
+        });
+        ShopifyBuy.UI.onReady(client).then(function (ui) {
+          products.forEach(function (p) {
+            ui.createComponent('product', {
+              id: p.id,
+              node: document.getElementById(p.node),
+              moneyFormat: '%C2%A3%7B%7Bamount%7D%7D',
+              options: {}
+            });
+          });
+        });
+      }
+    })();
+  </script>
+</Base>

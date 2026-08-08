@@ -1,0 +1,306 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap"
+  />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="header">
+    <div class="logo">
+      <a href="/">
+        <Image src={logo} alt="Motha Maker Logo" class="logo-img" height={128} densities={[1, 2]} />
+      </a>
+    </div>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav-menu" id="navMenu">
+      <a href="/#gallery" class="nav-link">Gallery</a>
+      <a href="/#videos" class="nav-link">Videos</a>
+      <a href="/#shop" class="nav-link">Shop</a>
+      <a href="/about" class="nav-link">About</a>
+    </nav>
+  </header>
+
+  <slot />
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p class="copyright">&copy; 2026 All artwork and content &copy; Marie Neal</p>
+      <div class="social-links">
+        <a href="https://www.instagram.com/mothaandmaker" target="_blank" rel="noopener" class="social-link" aria-label="Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <circle cx="12" cy="12" r="4"/>
+            <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+          </svg>
+          <span>Instagram</span>
+        </a>
+        <a href="https://www.youtube.com/@mariewatson3371" target="_blank" rel="noopener" class="social-link" aria-label="YouTube">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/>
+            <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor" stroke="none"/>
+          </svg>
+          <span>YouTube</span>
+        </a>
+        <a href="https://www.facebook.com/people/Motha-Maker/61579338660267" target="_blank" rel="noopener" class="social-link" aria-label="Facebook">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+          </svg>
+          <span>Facebook</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+    <button class="lightbox-prev" id="lightboxPrev" aria-label="Previous">&lsaquo;</button>
+    <button class="lightbox-next" id="lightboxNext" aria-label="Next">&rsaquo;</button>
+    <div class="lightbox-content">
+      <img id="lightboxImage" alt="" />
+      <div class="lightbox-video" id="lightboxVideo">
+        <iframe
+          id="lightboxIframe"
+          title="Video player"
+          frameborder="0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // —— HAMBURGER MENU ————————————————————————————————————————————
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.getElementById('navMenu');
+    hamburger?.addEventListener('click', () => {
+      hamburger.classList.toggle('active');
+      navMenu?.classList.toggle('active');
+    });
+    document.querySelectorAll('.nav-link').forEach((link) => {
+      link.addEventListener('click', () => {
+        hamburger?.classList.remove('active');
+        navMenu?.classList.remove('active');
+      });
+    });
+
+    // —— SHRINKING FROSTED HEADER ——————————————————————————————————
+    const header = document.querySelector('.header');
+    window.addEventListener(
+      'scroll',
+      () => header?.classList.toggle('scrolled', window.scrollY > 60),
+      { passive: true }
+    );
+
+    // —— SMOOTH SCROLL for same-page anchors ———————————————————————
+    document.querySelectorAll<HTMLAnchorElement>('a[href^="/#"], a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener('click', (e) => {
+        const hash = anchor.hash;
+        if (!hash) return;
+        const onHome = location.pathname === '/' || location.pathname === '/index.html';
+        const targetsHome = anchor.getAttribute('href')!.startsWith('#') || onHome;
+        if (!targetsHome) return; // navigating to another page — let it through
+        const target = document.querySelector(hash);
+        if (target) {
+          e.preventDefault();
+          window.scrollTo({ top: (target as HTMLElement).offsetTop - 80, behavior: 'smooth' });
+        }
+      });
+    });
+
+    // —— REVEAL ON SCROLL ——————————————————————————————————————————
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+    // —— LIGHTBOX ——————————————————————————————————————————————————
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImage') as HTMLImageElement | null;
+    const lightboxVideo = document.getElementById('lightboxVideo');
+    const lightboxIframe = document.getElementById('lightboxIframe') as HTMLIFrameElement | null;
+
+    let lbMode: 'image' | 'video' = 'image';
+    let currentList: string[] = [];
+    let currentIndex = 0;
+    let videoIds: string[] = [];
+
+    // Gallery image lists are embedded at build time
+    const galleryDataEl = document.getElementById('gallery-data');
+    const galleryImages: Record<string, string[]> = galleryDataEl
+      ? JSON.parse(galleryDataEl.textContent || '{}')
+      : {};
+
+    function showLightbox() {
+      if (!lightbox) return;
+      lightbox.classList.remove('visible');
+      lightbox.classList.add('active');
+      setTimeout(() => lightbox.classList.add('visible'), 20);
+      document.body.style.overflow = 'hidden';
+    }
+
+    function openImageAt(index: number) {
+      if (!lightbox || !lightboxImg || currentList.length === 0) return;
+      currentIndex = ((index % currentList.length) + currentList.length) % currentList.length;
+      lightboxImg.src = currentList[currentIndex];
+      showLightbox();
+    }
+
+    function stepImage(direction: number) {
+      if (!lightboxImg || currentList.length === 0) return;
+      const next = ((currentIndex + direction) % currentList.length + currentList.length) % currentList.length;
+      currentIndex = next;
+      lightboxImg.style.opacity = '0';
+      setTimeout(() => {
+        lightboxImg!.src = currentList[next];
+        lightboxImg!.onload = () => { lightboxImg!.style.opacity = '1'; };
+      }, 260);
+    }
+
+    document.addEventListener('click', (e) => {
+      const category = (e.target as HTMLElement).closest('.gallery-category');
+      if (category) {
+        const folder = category.getAttribute('data-folder');
+        if (!folder) return;
+        lbMode = 'image';
+        currentList = galleryImages[folder] || [];
+        if (lightboxImg) lightboxImg.style.display = 'block';
+        lightboxVideo?.classList.remove('active');
+        if (lightboxIframe) lightboxIframe.src = '';
+        openImageAt(0);
+      }
+    });
+
+    // —— VIDEOS ————————————————————————————————————————————————————
+    const videoItems = document.querySelectorAll<HTMLElement>('.video-list-item');
+    videoIds = Array.from(videoItems).map((el) => el.dataset.videoId || '');
+    videoItems.forEach((el, i) => el.addEventListener('click', () => openVideoAt(i)));
+
+    function openVideoAt(index: number) {
+      lbMode = 'video';
+      currentIndex = index;
+      if (lightboxImg) {
+        lightboxImg.style.display = 'none';
+        lightboxImg.src = '';
+      }
+      lightboxVideo?.classList.add('active');
+      if (lightboxIframe) {
+        lightboxIframe.src = `https://www.youtube.com/embed/${videoIds[index]}?autoplay=1&mute=1&playsinline=1`;
+      }
+      showLightbox();
+    }
+
+    function stepVideo(direction: number) {
+      const total = videoIds.length;
+      if (!total) return;
+      const next = ((currentIndex + direction) % total + total) % total;
+      if (lightboxIframe) lightboxIframe.src = '';
+      setTimeout(() => openVideoAt(next), 50);
+    }
+
+    function step(direction: number) {
+      if (lbMode === 'image') stepImage(direction);
+      else stepVideo(direction);
+    }
+
+    // —— CLOSE / NAVIGATE ——————————————————————————————————————————
+    function closeLightbox() {
+      if (!lightbox?.classList.contains('active')) return;
+      lightbox.classList.remove('visible');
+      setTimeout(() => {
+        lightbox.classList.remove('active');
+        if (lightboxIframe) lightboxIframe.src = '';
+        if (lightboxImg) {
+          lightboxImg.src = '';
+          lightboxImg.style.display = 'block';
+          lightboxImg.style.opacity = '1';
+        }
+        lightboxVideo?.classList.remove('active');
+        document.body.style.overflow = 'auto';
+      }, 320);
+    }
+
+    document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
+    document.getElementById('lightboxPrev')?.addEventListener('click', () => step(-1));
+    document.getElementById('lightboxNext')?.addEventListener('click', () => step(1));
+    lightbox?.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox?.classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') step(-1);
+      if (e.key === 'ArrowRight') step(1);
+    });
+
+    // —— TOUCH SWIPE (velocity + distance gated) ———————————————————
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0, swipeLocked = false;
+    lightbox?.addEventListener('touchstart', (e) => {
+      if (!lightbox.classList.contains('active')) return;
+      touchStartX = e.changedTouches[0].clientX;
+      touchStartY = e.changedTouches[0].clientY;
+      touchStartTime = Date.now();
+    }, { passive: true });
+
+    lightbox?.addEventListener('touchend', (e) => {
+      if (!lightbox.classList.contains('active') || swipeLocked) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const velocity = Math.abs(dx) / (Date.now() - touchStartTime);
+      if (Math.abs(dy) > Math.abs(dx) * 0.8) return;
+      if (Math.abs(dx) < 60 && velocity < 0.4) return;
+      swipeLocked = true;
+      setTimeout(() => { swipeLocked = false; }, 400);
+      step(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    // —— TRACKPAD TWO-FINGER SWIPE ————————————————————————————————
+    let wheelLocked = false;
+    lightbox?.addEventListener('wheel', (e) => {
+      if (!lightbox.classList.contains('active')) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5 && Math.abs(e.deltaX) > 15) {
+        e.preventDefault();
+        if (wheelLocked) return;
+        wheelLocked = true;
+        setTimeout(() => { wheelLocked = false; }, 300);
+        step(e.deltaX > 0 ? 1 : -1);
+      }
+    }, { passive: false });
+  </script>
+
+  <!-- Cloudflare Web Analytics -->
+  <script is:inline defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "6d6c14b039df48569b3e39603b0287ac"}'></script>
+</body>
+</html>

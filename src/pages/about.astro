@@ -1,0 +1,29 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import me from '../assets/me.jpg';
+---
+
+<Base title="About – Motha Maker">
+  <section class="about-section">
+    <div class="container">
+      <div class="about-inner">
+        <div class="about-image-wrap gloss">
+          <Image src={me} alt="Marie Neal" width={800} quality={82} format="webp" loading="eager" />
+        </div>
+
+        <div class="about-text">
+          <h1>About Me</h1>
+          <span class="about-subtitle">The artist behind Motha &amp; Maker</span>
+          <div class="about-rule"></div>
+
+          <p>Welcome. I'm Marie — a digital artist based in the UK, creating hand-drawn illustrations one careful line at a time. No AI generators, no shortcuts. Just a stylus, a screen, and a lot of patience.</p>
+
+          <p>My work spans food and drink illustration, wildlife and nature, and most recently a series dedicated to the 2026 Winter Olympics — capturing the speed, grace, and raw determination of the athletes competing on the world stage.</p>
+
+          <p>Every piece starts with the same thing: a genuine love of drawing. That instinct to look closely at the world and find the visual story worth telling. I hope you find something here that resonates.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

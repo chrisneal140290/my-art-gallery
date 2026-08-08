@@ -1,0 +1,15 @@
+{
+  "name": "mothamaker",
+  "type": "module",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.2.0",
+    "sharp": "^0.33.5"
+  }
+}
