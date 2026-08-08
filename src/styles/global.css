@@ -153,14 +153,14 @@ img {
 }
 
 .logo-img {
-  height: 64px;
+  height: 88px;
   width: auto;
   transition: height 0.35s ease;
   filter: drop-shadow(0 2px 6px rgba(63, 46, 56, 0.18));
 }
 
 .header.scrolled .logo-img {
-  height: 48px;
+  height: 60px;
 }
 
 .nav-menu {
@@ -254,6 +254,38 @@ img {
   background: linear-gradient(90deg, transparent, var(--gold-soft), transparent);
 }
 
+.hero {
+  overflow: hidden;
+}
+
+.hero .container {
+  position: relative;
+  z-index: 2;
+}
+
+/* drifting petals — canvas painted behind the content */
+.hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* glossy light that follows the cursor across the silk */
+.hero-light {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    460px circle at var(--mx, 50%) var(--my, 32%),
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.12) 42%,
+    transparent 72%
+  );
+  transition: opacity 0.6s ease;
+}
+
 .hero h1 {
   font-family: var(--serif);
   font-weight: 300;
@@ -287,12 +319,6 @@ img {
   border: 1px solid var(--gold-soft);
   box-shadow: var(--card-shadow);
   transform: rotate(-0.4deg);
-  transition: transform 0.5s cubic-bezier(0.25, 0.6, 0.3, 1), box-shadow 0.5s ease;
-}
-
-.hero-frame:hover {
-  transform: rotate(0deg) translateY(-6px);
-  box-shadow: var(--card-shadow-hover);
 }
 
 .hero-frame img {
