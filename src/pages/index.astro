@@ -66,6 +66,31 @@ const videos = csvRaw
 <Base title="Motha Maker - Art Gallery">
   <!-- Hero -->
   <section class="hero" id="home">
+    <svg class="hero-sketch" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <!-- the artist's line: flourishes that draw themselves -->
+      <path class="sketch-line sketch-a" pathLength="1" d="M 150 640
+        C 220 560, 190 470, 250 400
+        C 300 344, 370 350, 400 290
+        C 424 242, 396 200, 356 216
+        C 320 230, 330 284, 378 280
+        M 262 392
+        C 210 360, 150 380, 168 420
+        C 182 452, 240 436, 262 392
+        M 320 330
+        C 368 356, 428 344, 424 306
+        C 420 274, 362 282, 320 330" />
+      <path class="sketch-line sketch-b" pathLength="1" d="M 1300 160
+        C 1220 230, 1250 330, 1180 390
+        C 1120 442, 1050 430, 1010 490
+        C 978 538, 1010 584, 1052 566
+        C 1090 550, 1076 496, 1028 504
+        M 1168 400
+        C 1220 438, 1284 424, 1276 384
+        C 1268 350, 1206 358, 1168 400
+        M 1110 456
+        C 1062 428, 1000 442, 1006 480
+        C 1012 514, 1072 504, 1110 456" />
+    </svg>
     <canvas class="hero-canvas" id="heroCanvas" aria-hidden="true"></canvas>
     <div class="hero-light" aria-hidden="true"></div>
     <div class="container">
@@ -148,7 +173,7 @@ const videos = csvRaw
   <!-- Lightbox image data (built at compile time) -->
   <script type="application/json" id="gallery-data" set:html={JSON.stringify(lightboxData)} />
 
-  <!-- Hero: drifting petals + cursor-following gloss -->
+  <!-- Hero: your cursor is a stylus — calligraphic ink that fades like drying paint -->
   <script>
     const hero = document.querySelector<HTMLElement>('.hero');
     const canvas = document.getElementById('heroCanvas') as HTMLCanvasElement | null;
@@ -171,96 +196,102 @@ const videos = csvRaw
       resize();
       window.addEventListener('resize', resize, { passive: true });
 
-      // pointer state: parallax target + repulsion point
-      let mx = 0.5, my = 0.32;         // eased, 0..1
-      let tx = 0.5, ty = 0.32;         // target
-      let px = -9999, py = -9999;      // absolute px for repulsion
+      // an ink point: position, calligraphic width, birth time
+      type InkPoint = { x: number; y: number; w: number; t: number };
+      type Stroke = InkPoint[];
+
+      const strokes: Stroke[] = [];
+      let stroke: Stroke | null = null;
+      let lastX = 0, lastY = 0, lastT = 0, easedW = 0;
+
+      const INK_LIFE = 6000;   // ms before a mark fully dries away
+      const MAX_W = 16;        // slow, pressed line
+      const MIN_W = 2;         // fast flick
+
+      // eased cursor for the gloss light
+      let mx = 0.5, my = 0.32, tx = 0.5, ty = 0.32;
 
       hero.addEventListener('pointermove', (e) => {
         const r = hero!.getBoundingClientRect();
-        tx = (e.clientX - r.left) / r.width;
-        ty = (e.clientY - r.top) / r.height;
-        px = e.clientX - r.left;
-        py = e.clientY - r.top;
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        tx = x / r.width;
+        ty = y / r.height;
+
+        const now = performance.now();
+        const dt = Math.max(now - lastT, 1);
+        const dist = Math.hypot(x - lastX, y - lastY);
+        const speed = dist / dt; // px per ms
+
+        // begin a fresh stroke after a long pause or a jump
+        if (!stroke || dt > 600 || dist > 160) {
+          stroke = [];
+          strokes.push(stroke);
+          easedW = MIN_W * 1.6;
+        }
+
+        // pressure from speed: linger and the ink swells, flick and it tapers
+        const targetW = Math.max(MIN_W, Math.min(MAX_W, MAX_W - speed * 16));
+        easedW += (targetW - easedW) * 0.25;
+
+        stroke.push({ x, y, w: easedW, t: now });
+        if (stroke.length > 260) stroke.shift();
+
+        lastX = x; lastY = y; lastT = now;
       }, { passive: true });
 
-      hero.addEventListener('pointerleave', () => {
-        px = -9999; py = -9999;
-      }, { passive: true });
+      hero.addEventListener('pointerleave', () => { stroke = null; }, { passive: true });
 
-      // petals — blush, rose gold, ivory silk
-      const TINTS = [
-        [217, 165, 160],  // rose
-        [232, 199, 188],  // blush
-        [211, 181, 142],  // gold
-        [244, 231, 225],  // ivory
-        [183, 110, 121],  // deep rose gold
-      ];
+      // one calligraphic ribbon: varying-width segments, wet-shine core
+      function drawStroke(s: Stroke, now: number) {
+        // a lone touch still leaves a drop of ink
+        if (s.length === 1) {
+          const p = s[0];
+          const age = now - p.t;
+          if (age <= INK_LIFE) {
+            const fade = 1 - age / INK_LIFE;
+            ctx.fillStyle = `rgba(158, 91, 102, ${0.32 * fade})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(p.w * 0.6, 1.6), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          return;
+        }
+        for (let i = 1; i < s.length; i++) {
+          const a = s[i - 1], b = s[i];
+          const age = now - b.t;
+          if (age > INK_LIFE) continue;
+          const fade = 1 - age / INK_LIFE;
+          const alpha = 0.42 * fade;
+          const w = b.w * (0.55 + 0.45 * fade);
+          const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
 
-      type Petal = {
-        x: number; y: number; size: number; depth: number;
-        vy: number; sway: number; swaySpeed: number; phase: number;
-        rot: number; vrot: number; tint: number[]; alpha: number;
-        ox: number; oy: number;   // eased repulsion offset
-      };
+          // rose-gold ink body
+          ctx.strokeStyle = `rgba(158, 91, 102, ${alpha})`;
+          ctx.lineWidth = w;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.quadraticCurveTo(a.x, a.y, midX, midY);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
 
-      const COUNT = Math.round(Math.min(34, Math.max(18, window.innerWidth / 46)));
-      const petals: Petal[] = Array.from({ length: COUNT }, () => spawn(true));
-
-      function spawn(anywhere: boolean): Petal {
-        const depth = 0.35 + Math.random() * 0.65; // far..near
-        return {
-          x: Math.random() * (W || 1200),
-          y: anywhere ? Math.random() * (H || 700) : -40,
-          size: (9 + Math.random() * 15) * depth,
-          depth,
-          vy: (0.14 + Math.random() * 0.3) * depth,
-          sway: 14 + Math.random() * 26,
-          swaySpeed: 0.0016 + Math.random() * 0.0016,
-          phase: Math.random() * Math.PI * 2,
-          rot: Math.random() * Math.PI * 2,
-          vrot: (Math.random() - 0.5) * 0.006,
-          tint: TINTS[(Math.random() * TINTS.length) | 0],
-          alpha: 0.18 + Math.random() * 0.3,
-          ox: 0, oy: 0,
-        };
+          // wet-ink shine down the centre
+          if (w > 3) {
+            ctx.strokeStyle = `rgba(255, 249, 244, ${alpha * 0.8})`;
+            ctx.lineWidth = Math.max(w * 0.28, 0.8);
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y - w * 0.16);
+            ctx.lineTo(b.x, b.y - w * 0.16);
+            ctx.stroke();
+          }
+        }
       }
 
-      function drawPetal(p: Petal, sx: number, sy: number) {
-        ctx.save();
-        ctx.translate(sx, sy);
-        ctx.rotate(p.rot);
-        const s = p.size;
-        const [r, g, b] = p.tint;
-        const grad = ctx.createLinearGradient(0, -s, 0, s);
-        grad.addColorStop(0, `rgba(255,255,255,${p.alpha * 0.9})`);
-        grad.addColorStop(0.35, `rgba(${r},${g},${b},${p.alpha})`);
-        grad.addColorStop(1, `rgba(${r},${g},${b},${p.alpha * 0.55})`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        // teardrop petal: two mirrored beziers
-        ctx.moveTo(0, -s);
-        ctx.bezierCurveTo(s * 0.85, -s * 0.45, s * 0.6, s * 0.7, 0, s);
-        ctx.bezierCurveTo(-s * 0.6, s * 0.7, -s * 0.85, -s * 0.45, 0, -s);
-        ctx.fill();
-        // glossy midrib highlight
-        ctx.strokeStyle = `rgba(255,255,255,${p.alpha * 0.5})`;
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(0, -s * 0.7);
-        ctx.quadraticCurveTo(s * 0.12, 0, 0, s * 0.75);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      let last = performance.now();
       let running = true;
 
       function frame(now: number) {
-        const dt = Math.min(now - last, 50);
-        last = now;
-
-        // ease pointer for the gloss light + parallax
         mx += (tx - mx) * 0.06;
         my += (ty - my) * 0.06;
         hero!.style.setProperty('--mx', (mx * 100).toFixed(2) + '%');
@@ -268,38 +299,13 @@ const videos = csvRaw
 
         ctx.clearRect(0, 0, W, H);
 
-        for (let i = 0; i < petals.length; i++) {
-          const p = petals[i];
-          p.phase += p.swaySpeed * dt;
-          p.y += p.vy * dt * 0.06;
-          p.rot += p.vrot * dt * 0.06;
-
-          const swayX = Math.sin(p.phase) * p.sway;
-          const parX = (mx - 0.5) * 46 * p.depth;
-          const parY = (my - 0.5) * 26 * p.depth;
-
-          let bx = p.x + swayX + parX;
-          let by = p.y + parY;
-
-          // gentle repulsion — petals drift aside as the cursor approaches
-          const dx = bx - px, dy = by - py;
-          const dist = Math.hypot(dx, dy);
-          const R = 130;
-          let txo = 0, tyo = 0;
-          if (dist < R && dist > 0.001) {
-            const f = ((R - dist) / R) * 44 * p.depth;
-            txo = (dx / dist) * f;
-            tyo = (dy / dist) * f;
+        for (let i = strokes.length - 1; i >= 0; i--) {
+          const s = strokes[i];
+          if (!s.length || now - s[s.length - 1].t > INK_LIFE) {
+            if (s !== stroke) strokes.splice(i, 1);
+            continue;
           }
-          p.ox += (txo - p.ox) * 0.08;
-          p.oy += (tyo - p.oy) * 0.08;
-
-          drawPetal(p, bx + p.ox, by + p.oy);
-
-          if (p.y > H + 50) {
-            petals[i] = spawn(false);
-            petals[i].x = Math.random() * W;
-          }
+          drawStroke(s, now);
         }
 
         if (running) requestAnimationFrame(frame);
@@ -310,7 +316,6 @@ const videos = csvRaw
         const visible = entries[0].isIntersecting;
         if (visible && !running) {
           running = true;
-          last = performance.now();
           requestAnimationFrame(frame);
         } else if (!visible) {
           running = false;
