@@ -18,6 +18,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Build with Astro
         uses: withastro/action@56781b97402ce0487b7e61ce2cb960c0e2cc5289 # v3
+        with:
+          node-version: 24
 
   deploy:
     needs: build
