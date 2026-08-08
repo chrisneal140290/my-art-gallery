@@ -34,21 +34,64 @@ for (const list of Object.values(byFolder)) {
   list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
-// Optimized variants: card covers + full-size lightbox images
+// Optimized variants: card covers (two sizes for srcset) + full-size lightbox images
 const galleryCards = await Promise.all(
   galleries.map(async (g) => {
     const files = byFolder[g.folder] ?? [];
     const cover = files.length
       ? await getImage({ src: files[0].img, width: 900, format: 'webp', quality: 80 })
       : null;
+    const coverSmall = files.length
+      ? await getImage({ src: files[0].img, width: 450, format: 'webp', quality: 80 })
+      : null;
     const fulls = await Promise.all(
       files.map((f) => getImage({ src: f.img, width: 1600, format: 'webp', quality: 82 }))
     );
-    return { ...g, cover, count: files.length, fulls: fulls.map((f) => f.src) };
+    return { ...g, cover, coverSmall, count: files.length, fulls: fulls.map((f) => f.src) };
   })
 );
 
 const lightboxData = Object.fromEntries(galleryCards.map((g) => [g.folder, g.fulls]));
+const galleryTitles = Object.fromEntries(galleries.map((g) => [g.folder, g.title]));
+
+const description =
+  'Digital art, made by a human hand. No shortcuts. No generators. Just authentic, human-made art by Marie Neal — galleries of animals, birds, food, plants, sunflowers and more.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://mothamaker.com/#website',
+      url: 'https://mothamaker.com/',
+      name: 'Motha Maker',
+      description: 'Digital art, made by a human hand. No shortcuts. No generators. Just authentic, human-made art',
+      publisher: { '@id': 'https://mothamaker.com/#artist' },
+    },
+    {
+      '@type': 'Person',
+      '@id': 'https://mothamaker.com/#artist',
+      name: 'Marie Neal',
+      jobTitle: 'Digital Artist',
+      description: 'Digital artist based in the UK, creating hand-drawn illustrations one careful line at a time.',
+      url: 'https://mothamaker.com/about/',
+      nationality: 'GB',
+      sameAs: [
+        'https://www.instagram.com/mothaandmaker',
+        'https://www.youtube.com/@mariewatson3371',
+        'https://www.facebook.com/people/Motha-Maker/61579338660267',
+      ],
+    },
+    {
+      '@type': 'ImageGallery',
+      '@id': 'https://mothamaker.com/#gallery',
+      url: 'https://mothamaker.com/#gallery',
+      name: 'Galleries',
+      about: galleries.map((g) => g.title).join(', '),
+      author: { '@id': 'https://mothamaker.com/#artist' },
+    },
+  ],
+};
 
 // ── Videos: parsed from the same CSV at build time ────────────────
 const csvRaw = csvFile.replace(/^﻿/, '');
@@ -64,7 +107,8 @@ const videos = csvRaw
   .filter((v): v is { title: string; id: string } => !!v);
 ---
 
-<Base title="Motha Maker - Art Gallery">
+<Base title="Motha Maker - Art Gallery" description={description}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <!-- Hero -->
   <section class="hero" id="home">
     <svg class="hero-sketch" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -102,7 +146,7 @@ const videos = csvRaw
           <Image src={sunflower} alt="" class="hero-glow-img" width={900} quality={82} format="webp" loading="eager" />
         </div>
         <div class="hero-frame gloss">
-          <Image src={sunflower} alt="Sunflower artwork" class="hero-art" width={900} quality={82} format="webp" loading="eager" />
+          <Image src={sunflower} alt="Sunflower artwork" class="hero-art" width={900} quality={82} format="webp" loading="eager" fetchpriority="high" />
         </div>
       </div>
     </div>
@@ -117,9 +161,11 @@ const videos = csvRaw
         {galleryCards.map((g) => (
           <div class="gallery-category gloss reveal" data-folder={g.folder}>
             <div class="gallery-card">
-              {g.cover && (
+              {g.cover && g.coverSmall && (
                 <img
                   src={g.cover.src}
+                  srcset={`${g.coverSmall.src} 450w, ${g.cover.src} 900w`}
+                  sizes="(max-width: 720px) 90vw, (max-width: 1020px) 45vw, 370px"
                   alt={`${g.title} gallery preview`}
                   class="gallery-image"
                   width={g.cover.attributes.width}
@@ -180,6 +226,7 @@ const videos = csvRaw
 
   <!-- Lightbox image data (built at compile time) -->
   <script type="application/json" id="gallery-data" set:html={JSON.stringify(lightboxData)} />
+  <script type="application/json" id="gallery-titles" set:html={JSON.stringify(galleryTitles)} />
 
   <!-- Hero: your cursor is a stylus — calligraphic ink that fades like drying paint -->
   <script>
@@ -342,6 +389,14 @@ const videos = csvRaw
 
       if (art && glow && dataEl && !noMotion) {
         const byFolder: Record<string, string[]> = JSON.parse(dataEl.textContent || '{}');
+        const titlesEl = document.getElementById('gallery-titles');
+        const titles: Record<string, string> = titlesEl ? JSON.parse(titlesEl.textContent || '{}') : {};
+        const altFor = (url: string) => {
+          for (const [folder, urls] of Object.entries(byFolder)) {
+            if (urls.includes(url)) return `${titles[folder] || 'Gallery'} artwork by Marie Neal`;
+          }
+          return 'Digital artwork by Marie Neal';
+        };
         const pieces = Object.values(byFolder).flat();
 
         // shuffle so each visit tours the collection in a different order
@@ -374,6 +429,7 @@ const videos = csvRaw
                 glow!.style.opacity = '0.55';
               };
               art!.src = next;
+              art!.alt = altFor(next);
               art!.removeAttribute('srcset');
               glow!.removeAttribute('srcset');
             }, FADE_MS);

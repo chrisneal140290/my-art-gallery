@@ -678,9 +678,9 @@ img {
 
 .copyright {
   font-size: 11.5px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.14em;
-  color: var(--soft);
+  color: var(--mid);
   margin-bottom: 28px;
 }
 

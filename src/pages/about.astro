@@ -4,7 +4,27 @@ import Base from '../layouts/Base.astro';
 import me from '../assets/me.jpg';
 ---
 
-<Base title="About – Motha Maker">
+<Base
+  title="About – Motha Maker"
+  description="Meet Marie Neal, the artist behind Motha & Maker — a digital artist based in the UK, creating hand-drawn illustrations one careful line at a time. No AI generators, no shortcuts."
+>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    mainEntity: {
+      '@type': 'Person',
+      '@id': 'https://mothamaker.com/#artist',
+      name: 'Marie Neal',
+      jobTitle: 'Digital Artist',
+      description: 'Digital artist based in the UK, creating hand-drawn illustrations one careful line at a time.',
+      nationality: 'GB',
+      sameAs: [
+        'https://www.instagram.com/mothaandmaker',
+        'https://www.youtube.com/@mariewatson3371',
+        'https://www.facebook.com/people/Motha-Maker/61579338660267',
+      ],
+    },
+  })} />
   <section class="about-section">
     <div class="container">
       <div class="about-inner">
