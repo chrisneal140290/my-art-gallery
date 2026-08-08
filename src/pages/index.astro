@@ -97,8 +97,13 @@ const videos = csvRaw
     <div class="container">
       <h1>Digital art, made by a <em>human hand</em></h1>
       <p class="subtitle">No shortcuts. No generators. Just authentic, human-made art</p>
-      <div class="hero-frame gloss">
-        <Image src={sunflower} alt="Sunflower artwork" width={900} quality={82} format="webp" loading="eager" />
+      <div class="hero-stage">
+        <div class="hero-glow" aria-hidden="true">
+          <Image src={sunflower} alt="" class="hero-glow-img" width={900} quality={82} format="webp" loading="eager" />
+        </div>
+        <div class="hero-frame gloss">
+          <Image src={sunflower} alt="Sunflower artwork" class="hero-art" width={900} quality={82} format="webp" loading="eager" />
+        </div>
       </div>
     </div>
   </section>
@@ -326,6 +331,58 @@ const videos = csvRaw
       }).observe(hero);
 
       requestAnimationFrame(frame);
+    }
+
+    // —— HERO GALLERY CYCLE: every 10s the art fades out, a new piece fades in
+    {
+      const art = document.querySelector<HTMLImageElement>('.hero-art');
+      const glow = document.querySelector<HTMLImageElement>('.hero-glow-img');
+      const dataEl = document.getElementById('gallery-data');
+      const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (art && glow && dataEl && !noMotion) {
+        const byFolder: Record<string, string[]> = JSON.parse(dataEl.textContent || '{}');
+        const pieces = Object.values(byFolder).flat();
+
+        // shuffle so each visit tours the collection in a different order
+        for (let i = pieces.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+        }
+
+        let idx = -1;
+        let heroVisible = true;
+        new IntersectionObserver((entries) => {
+          heroVisible = entries[0].isIntersecting;
+        }).observe(art);
+
+        const FADE_MS = 900;
+
+        function advance() {
+          if (!heroVisible || document.hidden || !pieces.length) return;
+          idx = (idx + 1) % pieces.length;
+          const next = pieces[idx];
+
+          const pre = new Image();
+          pre.onload = () => {
+            art!.style.opacity = '0';
+            glow!.style.opacity = '0';
+            setTimeout(() => {
+              art!.onload = () => {
+                art!.style.opacity = '1';
+                glow!.src = next;
+                glow!.style.opacity = '0.55';
+              };
+              art!.src = next;
+              art!.removeAttribute('srcset');
+              glow!.removeAttribute('srcset');
+            }, FADE_MS);
+          };
+          pre.src = next;
+        }
+
+        setInterval(advance, 10000);
+      }
     }
   </script>
 
