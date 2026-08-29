@@ -13,6 +13,6 @@
     "@fontsource/cormorant-garamond": "^5.3.0",
     "@fontsource/jost": "^5.3.0",
     "astro": "^7.2.0",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.4"
   }
 }
