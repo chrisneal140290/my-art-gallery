@@ -552,6 +552,14 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
         return;
       }
 
+      const policy = document.permissionsPolicy || (document as Document & { featurePolicy?: { allowsFeature: (name: string) => boolean } }).featurePolicy;
+      if (policy && policy.allowsFeature('camera') === false) {
+        setStatus('');
+        showFallback('Cloudflare is blocking the camera on this site, so the browser will not ask for permission. In Cloudflare, change the Permissions-Policy header to camera=(self). Until then, take a photo of the wall below.');
+        openingCamera = false;
+        return;
+      }
+
       const gum = (constraints: MediaStreamConstraints) => navigator.mediaDevices.getUserMedia(constraints);
 
       let stream: MediaStream;
