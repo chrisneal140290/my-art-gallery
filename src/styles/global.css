@@ -263,14 +263,6 @@ img {
   z-index: 2;
 }
 
-/* the visitor's ink — canvas painted behind the content */
-.hero-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
 /* the artist's line — flourishes that draw themselves */
 .hero-sketch {
   position: absolute;
