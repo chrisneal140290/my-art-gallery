@@ -211,9 +211,9 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       </div>
       <div class="xr-actions">
         <p class="xr-info" id="xrInfo"></p>
-        <button class="wall-ar-btn" id="xrPlace" type="button" disabled>Hang it here</button>
+        <button class="wall-ar-btn" id="xrPlace" type="button" disabled>Mark this point</button>
         <div class="xr-links">
-          <button class="wall-link" id="xrMode" type="button">Plain wall? Use the floor line</button>
+          <button class="wall-link" id="xrMode" type="button">Find the wall automatically instead</button>
           <button class="wall-link" id="xrDone" type="button">Done</button>
         </div>
       </div>
@@ -533,7 +533,12 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       const outerW = print.w + (extra.mould + extra.mat) * 2;
       const outerH = print.h + (extra.mould + extra.mat) * 2;
       if (wallDims) {
+        const cm = (inches: number) => Math.round(inches * 2.54);
+        const metric = document.createElement('span');
+        metric.className = 'wall-cm';
+        metric.textContent = `${cm(outerW)} × ${cm(outerH)} cm`;
         wallDims.textContent = `${fmtIn(outerW)} × ${fmtIn(outerH)} in`;
+        wallDims.append(metric);
       }
       if (wallSub) {
         if (currentFinish === 'canvas') {
@@ -690,7 +695,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     }
 
     const arNotes = {
-      webxr: 'Stand 1 to 2 m from the wall in good light. Point at something on it, like a light switch or a frame, and move your phone slowly. Plain wall? You can mark where it meets the floor instead.',
+      webxr: 'Stand about 2 m from the wall in good light. You’ll tap twice along the line where the wall meets the floor, and the picture hangs flat on that wall at its real size, centred 145 cm up.',
       quickLook: 'Quick Look may put it on the floor first. Drag it up onto the wall: it stays at its real size.',
     };
 

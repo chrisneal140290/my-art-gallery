@@ -1151,6 +1151,14 @@ img {
   }
 }
 
+.wall-cm {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
 .wall-sub {
   margin-top: 4px;
   font-size: 11px;
@@ -1398,7 +1406,7 @@ img {
   display: block;
   position: absolute;
   z-index: 6;
-  top: calc(max(18px, env(safe-area-inset-top)) + 72px);
+  top: calc(max(18px, env(safe-area-inset-top)) + 96px);
   left: 50%;
   transform: translateX(-50%);
   width: min(360px, calc(100% - 32px));
@@ -1438,8 +1446,10 @@ img {
 
 .xr-links {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 22px;
+  gap: 6px 22px;
+  text-align: center;
 }
 
 .wall-preview.mode-xr .wall-link {

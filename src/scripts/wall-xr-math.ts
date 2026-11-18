@@ -5,6 +5,10 @@ import { Matrix4, Vector3 } from 'three';
 export const UP = new Vector3(0, 1, 0);
 /** Gallery hanging height: the centre of the piece 57 in (145 cm) above the floor. */
 export const HANG_CENTRE_M = 1.45;
+/** A horizontal surface counts as the floor only if it is at least this far below the phone. */
+export const MIN_FLOOR_DROP = 0.5;
+/** The two marks along the foot of the wall must be at least this far apart to fix its angle. */
+export const MIN_LINE_M = 0.3;
 
 export interface SurfaceSample {
   pos: Vector3;
@@ -13,9 +17,15 @@ export interface SurfaceSample {
   distance: number;
 }
 
+/** A detected plane: its pose (Y axis = normal) and its outline in that pose's XZ plane. */
+export interface PlaneOutline {
+  matrix: ArrayLike<number>;
+  polygon: ArrayLike<{ x: number; z: number }>;
+}
+
 // A WebXR hit-test pose is a column-major 4×4 matrix whose Y axis is the
 // surface normal and whose translation is the hit point.
-function hitNormal(m: ArrayLike<number>) {
+export function hitNormal(m: ArrayLike<number>) {
   return new Vector3(m[4], m[5], m[6]).normalize();
 }
 
@@ -43,25 +53,83 @@ export function wallSample(
   return { pos, normal, distance };
 }
 
+/** Height of an upward-facing hit far enough below the phone to be the floor, else null. */
+export function floorHeight(m: ArrayLike<number>, camPos: Vector3, minDrop = MIN_FLOOR_DROP) {
+  if (hitNormal(m).y < 0.9) return null;
+  const y = m[13];
+  return camPos.y - y >= minDrop ? y : null;
+}
+
+/** Where a ray meets the (endless) floor plane, if it does so ahead and within reach. */
+export function rayFloor(origin: Vector3, dir: Vector3, floorY: number, maxDistance = 6) {
+  // Level or upward rays never reach the floor in front.
+  if (dir.y > -0.02) return null;
+  const t = (floorY - origin.y) / dir.y;
+  if (t <= 0) return null;
+  const point = origin.clone().addScaledVector(dir, t);
+  return Math.hypot(point.x - origin.x, point.z - origin.z) <= maxDistance ? point : null;
+}
+
 /**
- * Accepts a hit on the floor (an upward-facing surface well below the phone).
- * The wall is taken to stand on that point, square to where the phone faces.
+ * The wall standing on a line marked along its foot, from a to b on the floor.
+ * Returns the midpoint of the line and the level normal facing the viewer.
  */
-export function floorSample(
-  m: ArrayLike<number>,
-  camPos: Vector3,
-  camForward: Vector3,
-  { minDrop = 0.6, max = 6 } = {},
-): SurfaceSample | null {
-  const n = hitNormal(m);
-  if (n.y < 0.9) return null;
-  const pos = hitPoint(m);
-  if (camPos.y - pos.y < minDrop) return null;
-  const distance = pos.distanceTo(camPos);
-  if (distance > max) return null;
-  const normal = new Vector3(-camForward.x, 0, -camForward.z);
-  if (normal.lengthSq() < 1e-6) return null;
-  return { pos, normal: normal.normalize(), distance };
+export function wallFromLine(a: Vector3, b: Vector3, camPos: Vector3, minLength = MIN_LINE_M) {
+  const along = new Vector3(b.x - a.x, 0, b.z - a.z);
+  const length = along.length();
+  if (length < minLength || length === 0) return null;
+  along.divideScalar(length);
+  const normal = new Vector3(-along.z, 0, along.x);
+  const foot = a.clone().add(b).multiplyScalar(0.5);
+  if (normal.dot(new Vector3(camPos.x - foot.x, 0, camPos.z - foot.z)) < 0) normal.negate();
+  return { foot, normal, length };
+}
+
+function segmentDistance(x: number, z: number, a: { x: number; z: number }, b: { x: number; z: number }) {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const lengthSq = dx * dx + dz * dz;
+  const t = lengthSq ? Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / lengthSq)) : 0;
+  return Math.hypot(x - (a.x + t * dx), z - (a.z + t * dz));
+}
+
+/** Inside the polygon, or within `margin` of its edge. */
+export function nearPolygon(x: number, z: number, polygon: ArrayLike<{ x: number; z: number }>, margin = 0) {
+  const n = polygon.length;
+  if (n < 3) return false;
+  let inside = false;
+  let nearest = Infinity;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const a = polygon[i];
+    const b = polygon[j];
+    if (a.z > z !== b.z > z && x < ((b.x - a.x) * (z - a.z)) / (b.z - a.z) + a.x) inside = !inside;
+    nearest = Math.min(nearest, segmentDistance(x, z, a, b));
+  }
+  return inside || nearest <= margin;
+}
+
+/**
+ * True if the point lies on one of the detected planes (within `margin` of its
+ * outline) and that plane faces the same way as `normal`. Chrome also reports
+ * hits on the endless extension of a plane found elsewhere in the room, which
+ * puts the picture at that surface's angle and distance instead of the wall's.
+ */
+export function onDetectedPlane(
+  point: Vector3,
+  normal: Vector3,
+  planes: Iterable<PlaneOutline>,
+  { margin = 0.1, maxGap = 0.05, maxAngle = (10 * Math.PI) / 180 } = {},
+) {
+  const minDot = Math.cos(maxAngle);
+  for (const plane of planes) {
+    const pose = new Matrix4().fromArray(Array.from(plane.matrix));
+    const planeNormal = new Vector3().setFromMatrixColumn(pose, 1).normalize();
+    if (Math.abs(planeNormal.dot(normal)) < minDot) continue;
+    const local = point.clone().applyMatrix4(pose.invert());
+    if (Math.abs(local.y) > maxGap) continue;
+    if (nearPolygon(local.x, local.z, plane.polygon, margin)) return true;
+  }
+  return false;
 }
 
 /**
@@ -71,14 +139,19 @@ export function floorSample(
 export class Stabilizer {
   private samples: SurfaceSample[] = [];
   private misses = 0;
+  private readonly keep: number;
+  private readonly need: number;
+  private readonly agree: number;
+  private readonly newSurface: number;
+  private readonly maxMisses: number;
 
-  constructor(
-    private readonly keep = 10,
-    private readonly need = 5,
-    private readonly agree = (5 * Math.PI) / 180,
-    private readonly newSurface = (12 * Math.PI) / 180,
-    private readonly maxMisses = 8,
-  ) {}
+  constructor(keep = 10, need = 5, agree = (5 * Math.PI) / 180, newSurface = (12 * Math.PI) / 180, maxMisses = 8) {
+    this.keep = keep;
+    this.need = need;
+    this.agree = agree;
+    this.newSurface = newSurface;
+    this.maxMisses = maxMisses;
+  }
 
   reset() {
     this.samples = [];
@@ -133,10 +206,29 @@ export function wallMatrix(pos: Vector3, normal: Vector3, out = new Matrix4()) {
   return out;
 }
 
-/** Keeps the position but turns the pose back to level and upright. */
+/**
+ * Keeps the position but turns the pose back to level and upright. If its
+ * Z axis points almost straight up or down there's no direction to keep, so
+ * `out` keeps the orientation it already had.
+ */
 export function levelled(m: Matrix4, out = new Matrix4()) {
   const pos = new Vector3().setFromMatrixPosition(m);
   const z = new Vector3().setFromMatrixColumn(m, 2);
+  if (z.x * z.x + z.z * z.z < 0.04) return out.setPosition(pos);
+  return wallMatrix(pos, z, out);
+}
+
+/** The same pose moved along its own wall: `x` sideways, `y` straight up. */
+export function slid(m: Matrix4, x: number, y: number, out = new Matrix4()) {
+  const pos = new Vector3().setFromMatrixPosition(m);
+  pos.addScaledVector(new Vector3().setFromMatrixColumn(m, 0), x).addScaledVector(UP, y);
+  return out.copy(m).setPosition(pos);
+}
+
+/** The same pose turned about the vertical line through its centre (positive = anticlockwise from above). */
+export function turned(m: Matrix4, angle: number, out = new Matrix4()) {
+  const pos = new Vector3().setFromMatrixPosition(m);
+  const z = new Vector3().setFromMatrixColumn(m, 2).applyAxisAngle(UP, angle);
   return wallMatrix(pos, z, out);
 }
 
