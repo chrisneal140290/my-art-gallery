@@ -116,6 +116,10 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
           allow="autoplay; encrypted-media; picture-in-picture"
           allowfullscreen></iframe>
       </div>
+      <div class="lightbox-actions" id="lightboxActions">
+        <button class="buy-btn buy-print" type="button">Buy print</button>
+        <button class="buy-btn buy-framed" type="button">Buy framed</button>
+      </div>
     </div>
   </div>
 
@@ -177,6 +181,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     const lightboxImg = document.getElementById('lightboxImage') as HTMLImageElement | null;
     const lightboxVideo = document.getElementById('lightboxVideo');
     const lightboxIframe = document.getElementById('lightboxIframe') as HTMLIFrameElement | null;
+    const lightboxActions = document.getElementById('lightboxActions');
 
     let lbMode: 'image' | 'video' = 'image';
     let currentList: string[] = [];
@@ -201,6 +206,10 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       if (!lightbox || !lightboxImg || currentList.length === 0) return;
       currentIndex = ((index % currentList.length) + currentList.length) % currentList.length;
       lightboxImg.src = currentList[currentIndex];
+      lightboxImg.style.display = 'block';
+      lightboxVideo?.classList.remove('active');
+      if (lightboxIframe) lightboxIframe.src = '';
+      if (lightboxActions) lightboxActions.style.display = 'flex';
       showLightbox();
     }
 
@@ -245,6 +254,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       if (lightboxIframe) {
         lightboxIframe.src = `https://www.youtube.com/embed/${videoIds[index]}?autoplay=1&mute=1&playsinline=1`;
       }
+      if (lightboxActions) lightboxActions.style.display = 'none';
       showLightbox();
     }
 
