@@ -1,10 +1,25 @@
 version: 2
 updates:
+  # npm: one PR for all security fixes, one for routine minor/patch bumps.
+  # Major versions still arrive on their own, since they can need code changes.
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      npm-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # GitHub Actions: everything in one PR
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

@@ -136,7 +136,6 @@ const videos = csvRaw
         C 1062 428, 1000 442, 1006 480
         C 1012 514, 1072 504, 1110 456" />
     </svg>
-    <canvas class="hero-canvas" id="heroCanvas" aria-hidden="true"></canvas>
     <div class="hero-light" aria-hidden="true"></div>
     <div class="container">
       <h1>Digital art, made by a <em>human hand</em></h1>
@@ -228,156 +227,30 @@ const videos = csvRaw
   <script type="application/json" id="gallery-data" set:html={JSON.stringify(lightboxData)} />
   <script type="application/json" id="gallery-titles" set:html={JSON.stringify(galleryTitles)} />
 
-  <!-- Hero: your cursor is a stylus — calligraphic ink that fades like drying paint -->
+  <!-- Hero: soft gloss light that eases toward the cursor -->
   <script>
     const hero = document.querySelector<HTMLElement>('.hero');
-    const canvas = document.getElementById('heroCanvas') as HTMLCanvasElement | null;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    if (hero && canvas && !reduceMotion) {
-      const ctx = canvas.getContext('2d')!;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      let W = 0, H = 0;
-
-      function resize() {
-        W = hero!.offsetWidth;
-        H = hero!.offsetHeight;
-        canvas!.width = W * dpr;
-        canvas!.height = H * dpr;
-        canvas!.style.width = W + 'px';
-        canvas!.style.height = H + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-      resize();
-      window.addEventListener('resize', resize, { passive: true });
-
-      // an ink point: position, calligraphic width, birth time
-      type InkPoint = { x: number; y: number; w: number; t: number };
-      type Stroke = InkPoint[];
-
-      const strokes: Stroke[] = [];
-      let stroke: Stroke | null = null;
-      let lastX = 0, lastY = 0, lastT = 0, easedW = 0;
-
-      const INK_LIFE = 6000;   // ms before a mark fully dries away
-      const MAX_W = 16;        // slow, pressed line
-      const MIN_W = 2;         // fast flick
-
-      // eased cursor for the gloss light
+    if (hero && !reduceMotion) {
       let mx = 0.5, my = 0.32, tx = 0.5, ty = 0.32;
+      let raf = 0;
 
-      hero.addEventListener('pointermove', (e) => {
-        const r = hero!.getBoundingClientRect();
-        const x = e.clientX - r.left;
-        const y = e.clientY - r.top;
-        tx = x / r.width;
-        ty = y / r.height;
-
-        const now = performance.now();
-        const dt = Math.max(now - lastT, 1);
-        const dist = Math.hypot(x - lastX, y - lastY);
-        const speed = dist / dt; // px per ms
-
-        // begin a fresh stroke after a long pause or a jump
-        if (!stroke || dt > 600 || dist > 160) {
-          stroke = [];
-          strokes.push(stroke);
-          easedW = MIN_W * 1.6;
-        }
-
-        // pressure from speed: linger and the ink swells, flick and it tapers
-        const targetW = Math.max(MIN_W, Math.min(MAX_W, MAX_W - speed * 16));
-        easedW += (targetW - easedW) * 0.25;
-
-        stroke.push({ x, y, w: easedW, t: now });
-        if (stroke.length > 260) stroke.shift();
-
-        lastX = x; lastY = y; lastT = now;
-      }, { passive: true });
-
-      hero.addEventListener('pointerleave', () => { stroke = null; }, { passive: true });
-
-      // one calligraphic ribbon: varying-width segments, wet-shine core
-      function drawStroke(s: Stroke, now: number) {
-        // a lone touch still leaves a drop of ink
-        if (s.length === 1) {
-          const p = s[0];
-          const age = now - p.t;
-          if (age <= INK_LIFE) {
-            const fade = 1 - age / INK_LIFE;
-            ctx.fillStyle = `rgba(158, 91, 102, ${0.32 * fade})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, Math.max(p.w * 0.6, 1.6), 0, Math.PI * 2);
-            ctx.fill();
-          }
-          return;
-        }
-        for (let i = 1; i < s.length; i++) {
-          const a = s[i - 1], b = s[i];
-          const age = now - b.t;
-          if (age > INK_LIFE) continue;
-          const fade = 1 - age / INK_LIFE;
-          const alpha = 0.42 * fade;
-          const w = b.w * (0.55 + 0.45 * fade);
-          const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
-
-          // rose-gold ink body
-          ctx.strokeStyle = `rgba(158, 91, 102, ${alpha})`;
-          ctx.lineWidth = w;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.quadraticCurveTo(a.x, a.y, midX, midY);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
-
-          // wet-ink shine down the centre
-          if (w > 3) {
-            ctx.strokeStyle = `rgba(255, 249, 244, ${alpha * 0.8})`;
-            ctx.lineWidth = Math.max(w * 0.28, 0.8);
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y - w * 0.16);
-            ctx.lineTo(b.x, b.y - w * 0.16);
-            ctx.stroke();
-          }
-        }
-      }
-
-      let running = true;
-
-      function frame(now: number) {
+      function frame() {
         mx += (tx - mx) * 0.06;
         my += (ty - my) * 0.06;
         hero!.style.setProperty('--mx', (mx * 100).toFixed(2) + '%');
         hero!.style.setProperty('--my', (my * 100).toFixed(2) + '%');
-
-        ctx.clearRect(0, 0, W, H);
-
-        for (let i = strokes.length - 1; i >= 0; i--) {
-          const s = strokes[i];
-          if (!s.length || now - s[s.length - 1].t > INK_LIFE) {
-            if (s !== stroke) strokes.splice(i, 1);
-            continue;
-          }
-          drawStroke(s, now);
-        }
-
-        if (running) requestAnimationFrame(frame);
+        // keep easing until the light settles, then stop — no idle frames
+        raf = Math.abs(tx - mx) + Math.abs(ty - my) > 0.0005 ? requestAnimationFrame(frame) : 0;
       }
 
-      // pause when the hero is off-screen — no wasted frames
-      new IntersectionObserver((entries) => {
-        const visible = entries[0].isIntersecting;
-        if (visible && !running) {
-          running = true;
-          requestAnimationFrame(frame);
-        } else if (!visible) {
-          running = false;
-        }
-      }).observe(hero);
-
-      requestAnimationFrame(frame);
+      hero.addEventListener('pointermove', (e) => {
+        const r = hero!.getBoundingClientRect();
+        tx = (e.clientX - r.left) / r.width;
+        ty = (e.clientY - r.top) / r.height;
+        if (!raf) raf = requestAnimationFrame(frame);
+      }, { passive: true });
     }
 
     // —— HERO GALLERY CYCLE: every 10s the art fades out, a new piece fades in
