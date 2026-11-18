@@ -760,13 +760,13 @@ img {
   padding: 0 10px;
 }
 
-.buy-btn {
+.wall-btn {
   font-family: var(--sans);
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  padding: 12px 28px;
+  padding: 14px 32px;
   border-radius: 999px;
   border: 1px solid var(--gold-soft);
   background: var(--card-face);
@@ -776,19 +776,10 @@ img {
   transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
 }
 
-.buy-btn:hover {
+.wall-btn:hover {
   transform: translateY(-2px);
   color: var(--rosegold-dark);
   box-shadow: var(--card-shadow-hover);
-}
-
-.buy-print {
-  background: linear-gradient(160deg, #ffffff 0%, #fdf8f3 100%);
-}
-
-.buy-framed {
-  background: linear-gradient(160deg, var(--blush) 0%, #ecd8cf 100%);
-  color: var(--rosegold-dark);
 }
 
 .lightbox-video {
@@ -858,6 +849,131 @@ img {
 .lightbox-prev:hover,
 .lightbox-next:hover {
   transform: translateY(-50%) scale(1.06);
+}
+
+/* ── wall preview ───────────────────────────────────────────────── */
+
+.wall-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: none;
+  background: #000;
+}
+
+.wall-preview.active {
+  display: block;
+}
+
+.wall-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wall-art-wrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 70vw;
+  max-height: 70vh;
+  transition: transform 0.4s ease;
+  pointer-events: none;
+}
+
+.wall-art-wrap img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+}
+
+.wall-art-wrap.finish-framed {
+  padding: 18px;
+  background: linear-gradient(160deg, #f8f0e8, #e8d8cc);
+  border: 8px solid #c9a98a;
+  border-radius: 6px;
+  box-shadow: 0 20px 50px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.wall-art-wrap.finish-canvas {
+  filter: contrast(1.05) saturate(1.1);
+  box-shadow: 0 16px 40px -16px rgba(0,0,0,0.45);
+}
+
+.wall-art-wrap.finish-canvas img {
+  border-radius: 0;
+}
+
+.wall-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 28px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.wall-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px 28px;
+  background: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.wall-control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.wall-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+}
+
+.wall-options {
+  display: flex;
+  gap: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 4px;
+  backdrop-filter: blur(10px);
+}
+
+.wall-options button {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.wall-options button.active {
+  background: var(--card-face);
+  color: var(--ink);
 }
 
 /* ── about page ─────────────────────────────────────────────────── */
@@ -1037,5 +1153,11 @@ img {
 
   .lightbox-next {
     right: 12px;
+  }
+
+  .wall-controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
   }
 }
