@@ -573,24 +573,24 @@ img {
   box-shadow: var(--card-shadow-hover);
 }
 
-/* ── videos: black lacquer ──────────────────────────────────────── */
+/* ── videos: soft on-brand ──────────────────────────────────────── */
 
 .videos-section {
   padding: 110px 0 130px;
-  color: #efe6ea;
+  color: var(--ink);
   background:
-    radial-gradient(900px 400px at 50% -4%, rgba(255, 255, 255, 0.12), transparent 60%),
-    radial-gradient(700px 500px at 88% 100%, rgba(183, 110, 121, 0.16), transparent 60%),
-    linear-gradient(180deg, var(--lacquer) 0%, var(--lacquer-2) 100%);
+    radial-gradient(900px 500px at 50% 0%, rgba(255, 255, 255, 0.7), transparent 65%),
+    radial-gradient(700px 500px at 88% 100%, rgba(244, 231, 225, 0.4), transparent 60%),
+    linear-gradient(180deg, var(--ivory) 0%, var(--blush) 100%);
   position: relative;
 }
 
 .videos-section .section-heading {
-  color: #f7eef2;
+  color: var(--ink);
 }
 
 .videos-section .section-description {
-  color: rgba(239, 230, 234, 0.55);
+  color: var(--soft);
 }
 
 .video-list {
@@ -608,18 +608,15 @@ img {
   padding: 18px 26px;
   border-radius: 16px;
   cursor: pointer;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.05) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 18px 36px -22px rgba(0, 0, 0, 0.6);
-  transition: transform 0.4s cubic-bezier(0.25, 0.6, 0.3, 1), background 0.4s ease, border-color 0.4s ease;
+  background: var(--card-face);
+  border: 1px solid var(--gold-soft);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.4s cubic-bezier(0.25, 0.6, 0.3, 1), box-shadow 0.4s ease;
 }
 
 .video-list-item:hover {
   transform: translateX(8px);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.08) 100%);
-  border-color: rgba(211, 181, 142, 0.4);
+  box-shadow: var(--card-shadow-hover);
 }
 
 .video-list-play {
@@ -649,13 +646,14 @@ img {
   font-size: 21px;
   font-weight: 400;
   letter-spacing: 0.02em;
+  color: var(--ink);
 }
 
 .video-list-num {
   font-size: 11px;
   font-weight: 400;
   letter-spacing: 0.2em;
-  color: var(--gold);
+  color: var(--rosegold);
   opacity: 0.85;
 }
 
@@ -738,6 +736,9 @@ img {
 .lightbox-content {
   max-width: min(1100px, 90vw);
   max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .lightbox-content img {
@@ -749,6 +750,45 @@ img {
     0 0 0 1px rgba(255, 255, 255, 0.12),
     0 40px 90px -30px rgba(0, 0, 0, 0.8);
   transition: opacity 0.28s ease;
+}
+
+.lightbox-actions {
+  display: none;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 0 10px;
+}
+
+.buy-btn {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 1px solid var(--gold-soft);
+  background: var(--card-face);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+.buy-btn:hover {
+  transform: translateY(-2px);
+  color: var(--rosegold-dark);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.buy-print {
+  background: linear-gradient(160deg, #ffffff 0%, #fdf8f3 100%);
+}
+
+.buy-framed {
+  background: linear-gradient(160deg, var(--blush) 0%, #ecd8cf 100%);
+  color: var(--rosegold-dark);
 }
 
 .lightbox-video {
@@ -978,39 +1018,24 @@ img {
 
   .about-inner {
     grid-template-columns: 1fr;
-    gap: 44px;
+    gap: 40px;
   }
 
   .about-image-wrap {
     position: static;
   }
 
-  .about-text h1 {
-    font-size: 38px;
-  }
-
-  .about-section {
-    padding: 150px 0 80px;
-  }
-
-  .video-list-title {
-    font-size: 17px;
-  }
-
-  .video-list-item {
-    padding: 14px 18px;
-    gap: 14px;
-  }
-
-  .social-links {
-    flex-wrap: wrap;
+  .lightbox-prev,
+  .lightbox-next {
+    width: 44px;
+    height: 44px;
   }
 
   .lightbox-prev {
-    left: 10px;
+    left: 12px;
   }
 
   .lightbox-next {
-    right: 10px;
+    right: 12px;
   }
 }
