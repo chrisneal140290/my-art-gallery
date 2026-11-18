@@ -1,7 +1,6 @@
-// Builds a framed print or a stretched canvas as a 3D model at its real size,
-// for <model-viewer> to hang on a wall in AR. Loaded only when the wall
-// preview opens, so the main page stays light.
-import '@google/model-viewer';
+// Builds a framed print or a stretched canvas as a 3D model at its real size.
+// The same geometry feeds the in-browser AR session (wall-xr.ts) and the .glb
+// that <model-viewer> shows inline and turns into a USDZ for iPhone Quick Look.
 import {
   BoxGeometry,
   Group,
@@ -15,8 +14,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
 export type Finish = 'framed' | 'canvas';
 
-export interface PieceSpec {
-  image: HTMLImageElement;
+export interface PieceSize {
   /** Printed artwork size in inches, without frame or mount. */
   printW: number;
   printH: number;
@@ -27,30 +25,41 @@ export interface PieceSpec {
   mat: number;
 }
 
-// glTF units are metres, which is what AR uses for real-world size.
-const INCH = 0.0254;
+export interface PieceSpec extends PieceSize {
+  image: HTMLImageElement;
+}
+
+// Units are metres, which is what AR uses for real-world size.
+export const INCH = 0.0254;
 const FRAME_DEPTH = 0.9 * INCH;
 const MOUNT_RECESS = 0.3 * INCH;
 const CANVAS_DEPTH = 1.5 * INCH;
 // How much of each image edge is stretched round the canvas sides.
 const WRAP = 0.035;
 
-function artTexture(image: HTMLImageElement) {
+export function artTexture(image: HTMLImageElement) {
   const texture = new Texture(image);
   texture.colorSpace = SRGBColorSpace;
-  // Embed the art as JPEG: PNG would make the model several times larger.
+  // Embed the art as JPEG in the .glb: PNG would make it several times larger.
   texture.userData.mimeType = 'image/jpeg';
   texture.needsUpdate = true;
   return texture;
 }
 
-function framedPiece(spec: PieceSpec, texture: Texture) {
-  const pw = spec.printW * INCH;
-  const ph = spec.printH * INCH;
-  const m = spec.mould * INCH;
-  const t = spec.mat * INCH;
-  const ow = pw + 2 * (m + t);
-  const oh = ph + 2 * (m + t);
+/** Outside size of the finished piece in metres. */
+export function outerSize(size: PieceSize) {
+  if (size.finish === 'canvas') {
+    return { w: size.printW * INCH, h: size.printH * INCH, depth: CANVAS_DEPTH };
+  }
+  const border = 2 * (size.mould + size.mat) * INCH;
+  return { w: size.printW * INCH + border, h: size.printH * INCH + border, depth: FRAME_DEPTH };
+}
+
+function framedPiece(size: PieceSize, texture: Texture) {
+  const pw = size.printW * INCH;
+  const ph = size.printH * INCH;
+  const m = size.mould * INCH;
+  const { w: ow, h: oh } = outerSize(size);
 
   const group = new Group();
   const frame = new MeshStandardMaterial({ color: 0xb98d5f, metalness: 0.35, roughness: 0.42 });
@@ -80,9 +89,9 @@ function framedPiece(spec: PieceSpec, texture: Texture) {
   return group;
 }
 
-function canvasPiece(spec: PieceSpec, texture: Texture) {
-  const w = spec.printW * INCH;
-  const h = spec.printH * INCH;
+function canvasPiece(size: PieceSize, texture: Texture) {
+  const w = size.printW * INCH;
+  const h = size.printH * INCH;
   const d = CANVAS_DEPTH;
   const geometry = new BoxGeometry(w, h, d);
 
@@ -118,10 +127,14 @@ function canvasPiece(spec: PieceSpec, texture: Texture) {
   return group;
 }
 
+/** The piece as a three.js group: back at z = 0, facing +Z, centred on x and y. */
+export function buildPieceGroup(size: PieceSize, texture: Texture) {
+  return size.finish === 'canvas' ? canvasPiece(size, texture) : framedPiece(size, texture);
+}
+
 /** Returns a blob: URL of a binary glTF (.glb) of the piece at real size. */
 export async function buildPieceModel(spec: PieceSpec): Promise<string> {
-  const texture = artTexture(spec.image);
-  const piece = spec.finish === 'canvas' ? canvasPiece(spec, texture) : framedPiece(spec, texture);
+  const piece = buildPieceGroup(spec, artTexture(spec.image));
   const glb = (await new GLTFExporter().parseAsync(piece, {
     binary: true,
     maxTextureSize: 2048,

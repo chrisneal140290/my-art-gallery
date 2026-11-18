@@ -153,7 +153,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       id="wallModel"
       class="wall-model"
       ar
-      ar-modes="webxr quick-look"
+      ar-modes="quick-look"
       ar-placement="wall"
       ar-scale="fixed"
       camera-controls
@@ -175,6 +175,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       <p class="wall-dims" id="wallDims">16 × 16 in</p>
       <p class="wall-sub" id="wallSub">Including frame</p>
     </div>
+    <p class="xr-status" id="xrStatus" aria-live="polite"></p>
     <p class="wall-status" id="wallStatus" hidden></p>
     <div class="wall-fallback" id="wallFallback" hidden>
       <p id="wallFallbackText">The live camera isn’t available in this browser.</p>
@@ -205,8 +206,16 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       </div>
       <div class="wall-ar-panel">
         <button class="wall-ar-btn" id="wallArBtn" type="button" disabled>Preparing 3D view…</button>
-        <p class="wall-ar-note">Your camera finds the wall and hangs the piece at its real size. Move your phone slowly across the wall until it appears, then drag it into place.</p>
+        <p class="wall-ar-note" id="wallArNote">Your camera finds the wall and hangs the piece at its real size.</p>
         <button class="wall-link" id="wallUseCamera" type="button">Use the simple camera view instead</button>
+      </div>
+      <div class="xr-actions">
+        <p class="xr-info" id="xrInfo"></p>
+        <button class="wall-ar-btn" id="xrPlace" type="button" disabled>Hang it here</button>
+        <div class="xr-links">
+          <button class="wall-link" id="xrMode" type="button">Plain wall? Use the floor line</button>
+          <button class="wall-link" id="xrDone" type="button">Done</button>
+        </div>
       </div>
       <p class="wall-hint">Drag to place. Pinch if you are closer or further than about four feet.</p>
     </div>
@@ -457,10 +466,12 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
         return false;
       }
     })();
-    let webxrAR = false;
+    // `?fake-xr` takes the Android AR path on a desktop dev server, for testing with a mock; stripped from the live build.
+    const fakeXR = import.meta.env.DEV && location.search.includes('fake-xr');
+    let webxrAR = fakeXR;
     (navigator as Navigator & { xr?: { isSessionSupported(mode: string): Promise<boolean> } }).xr
       ?.isSessionSupported('immersive-ar')
-      .then((ok) => { webxrAR = ok; })
+      .then((ok) => { webxrAR = ok || fakeXR; })
       .catch(() => {});
 
     let cameraStream: MediaStream | null = null;
@@ -655,15 +666,33 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     }
 
     // —— AR mode: a real-size 3D model the phone hangs on the wall ——
-    let wallLib: Promise<typeof import('../scripts/wall-model')> | null = null;
+    // Android runs our own WebXR wall placement (wall-xr.ts); iPhone uses Quick Look.
+    type WallLib = typeof import('../scripts/wall-lazy');
+    let wallLib: Promise<WallLib> | null = null;
+    let wallMod: WallLib | null = null;
+    let artImage: HTMLImageElement | null = null;
+    let xrHandle: import('../scripts/wall-lazy').WallXrHandle | null = null;
+    let modelDirty = false;
     let modelUrl = '';
     let modelJob = 0;
     let modelTimer = 0;
 
-    function setMode(mode: 'ar' | 'camera') {
+    function setMode(mode: 'ar' | 'camera' | 'xr') {
       wallPreview?.classList.toggle('mode-ar', mode === 'ar');
       wallPreview?.classList.toggle('mode-camera', mode === 'camera');
+      wallPreview?.classList.toggle('mode-xr', mode === 'xr');
     }
+
+    function currentSize() {
+      const print = printInches();
+      const extra = frameExtras(Math.max(print.w, print.h));
+      return { printW: print.w, printH: print.h, finish: currentFinish, mould: extra.mould, mat: extra.mat };
+    }
+
+    const arNotes = {
+      webxr: 'Stand 1 to 2 m from the wall in good light. Point at something on it, like a light switch or a frame, and move your phone slowly. Plain wall? You can mark where it meets the floor instead.',
+      quickLook: 'Quick Look may put it on the floor first. Drag it up onto the wall: it stays at its real size.',
+    };
 
     function setArButton(ready: boolean) {
       if (!wallArBtn) return;
@@ -681,6 +710,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     }
 
     function useCameraView() {
+      xrHandle?.end();
       modelJob++;
       clearTimeout(modelTimer);
       setMode('camera');
@@ -691,24 +721,20 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     async function buildModel() {
       if (!wallModel || !wallArt?.src) return;
       const job = ++modelJob;
-      setArButton(false);
+      // Android's AR session builds its own model, so once it has the artwork it needn't wait for the preview.
+      const xrReady = () => webxrAR && wallMod && artImage?.src === wallArt.src;
+      if (!xrReady()) setArButton(false);
       try {
-        wallLib ??= import('../scripts/wall-model');
+        wallLib ??= import('../scripts/wall-lazy');
         const [lib, img] = await Promise.all([wallLib, loadImage(wallArt.src)]);
         if (job !== modelJob) return;
+        wallMod = lib;
+        artImage = img;
+        if (xrReady()) setArButton(true);
         artW = img.naturalWidth || artW;
         artH = img.naturalHeight || artH;
         layoutPiece();
-        const print = printInches();
-        const extra = frameExtras(Math.max(print.w, print.h));
-        const url = await lib.buildPieceModel({
-          image: img,
-          printW: print.w,
-          printH: print.h,
-          finish: currentFinish,
-          mould: extra.mould,
-          mat: extra.mat,
-        });
+        const url = await lib.buildPieceModel({ image: img, ...currentSize() });
         if (job !== modelJob) {
           URL.revokeObjectURL(url);
           return;
@@ -739,14 +765,50 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       const status = (event as CustomEvent<{ status: string }>).detail?.status;
       if (status === 'failed') useCameraView();
     });
+    const xrUi = {
+      status: document.getElementById('xrStatus'),
+      info: document.getElementById('xrInfo'),
+      place: document.getElementById('xrPlace') as HTMLButtonElement | null,
+      mode: document.getElementById('xrMode') as HTMLButtonElement | null,
+      done: document.getElementById('xrDone') as HTMLButtonElement | null,
+    };
+    const wallArNote = document.getElementById('wallArNote');
+
+    function startXr() {
+      const { status, info, place, mode, done } = xrUi;
+      if (!wallMod || !artImage || !wallPreview || !status || !info || !place || !mode || !done) return;
+      xrHandle = wallMod.startWallXr({
+        image: artImage,
+        size: currentSize(),
+        ui: { root: wallPreview, status, info, place, mode, done },
+        onStart: () => setMode('xr'),
+        onEnd: ({ error }) => {
+          xrHandle = null;
+          if (!wallPreview.classList.contains('mode-camera')) setMode('ar');
+          if (modelDirty) {
+            modelDirty = false;
+            scheduleModel();
+          }
+          if (error) {
+            console.error('[wall] AR session failed', error);
+            if (wallArNote) {
+              wallArNote.textContent = 'AR couldn’t start on this phone. Check the camera is allowed for this site and Google Play Services for AR is installed, or use the simple camera view.';
+            }
+          }
+        },
+      });
+    }
+
     wallArBtn?.addEventListener('click', () => {
       if (!wallModel) return;
-      if (!wallModel.canActivateAR) {
+      // Both paths must start inside the tap: AR sessions need a user gesture.
+      if (webxrAR && wallMod && artImage) {
+        startXr();
+      } else if (wallModel.canActivateAR) {
+        void wallModel.activateAR();
+      } else {
         useCameraView();
-        return;
       }
-      // Must run inside the tap: AR sessions need a user gesture.
-      void wallModel.activateAR();
     });
     wallUseCamera?.addEventListener('click', useCameraView);
 
@@ -760,9 +822,10 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       hideFallback();
       layoutPiece();
       // `?fake-ar` shows the AR screen on a desktop dev server; it is stripped from the live build.
-      const fakeAR = import.meta.env.DEV && location.search.includes('fake-ar');
+      const fakeAR = import.meta.env.DEV && /fake-(ar|xr)/.test(location.search);
       if (fakeAR || quickLookAR || webxrAR) {
         setMode('ar');
+        if (wallArNote) wallArNote.textContent = quickLookAR && !webxrAR ? arNotes.quickLook : arNotes.webxr;
         void buildModel();
       } else {
         setMode('camera');
@@ -772,6 +835,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     }
 
     function closeWallPreview() {
+      xrHandle?.end();
       wallPreview?.classList.remove('active');
       modelJob++;
       clearTimeout(modelTimer);
@@ -820,7 +884,13 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
           if (g === 'size') longSide = Number(btn.dataset.value) || 12;
           if (g === 'finish') currentFinish = (btn.dataset.value as 'framed' | 'canvas') || 'framed';
           layoutPiece();
-          if (wallPreview?.classList.contains('mode-ar')) scheduleModel();
+          if (xrHandle) {
+            // Resize live in AR; rebuild the inline model once AR closes.
+            xrHandle.setSize(currentSize());
+            modelDirty = true;
+          } else if (wallPreview?.classList.contains('mode-ar')) {
+            scheduleModel();
+          }
         });
       });
     });

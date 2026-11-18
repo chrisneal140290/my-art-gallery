@@ -1366,6 +1366,87 @@ img {
   cursor: pointer;
 }
 
+/* In AR (Android): the preview becomes a see-through overlay on the live camera */
+
+.xr-status,
+.xr-actions {
+  display: none;
+}
+
+.wall-preview.active.mode-xr {
+  display: block;
+  background: transparent;
+}
+
+.wall-preview.mode-xr #wallCamera,
+.wall-preview.mode-xr .wall-still,
+.wall-preview.mode-xr .wall-stage,
+.wall-preview.mode-xr .wall-flip,
+.wall-preview.mode-xr .wall-hint,
+.wall-preview.mode-xr .wall-model,
+.wall-preview.mode-xr .wall-ar-panel,
+.wall-preview.mode-xr .wall-status,
+.wall-preview.mode-xr .wall-fallback {
+  display: none;
+}
+
+.wall-preview.mode-xr .wall-readout {
+  width: calc(100% - 136px);
+}
+
+.wall-preview.mode-xr .xr-status {
+  display: block;
+  position: absolute;
+  z-index: 6;
+  top: calc(max(18px, env(safe-area-inset-top)) + 72px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 32px));
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(20, 12, 16, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+}
+
+.wall-preview.mode-xr .xr-status:empty {
+  display: none;
+}
+
+.wall-preview.mode-xr .xr-actions {
+  display: flex;
+  order: 3;
+  flex-basis: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.xr-info {
+  min-height: 1.4em;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.xr-links {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+}
+
+.wall-preview.mode-xr .wall-link {
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+
 /* ── about page ─────────────────────────────────────────────────── */
 
 .about-section {
