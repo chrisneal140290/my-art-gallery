@@ -124,29 +124,65 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
 
   <!-- Wall preview overlay -->
   <div class="wall-preview" id="wallPreview">
-    <button class="wall-close" id="wallClose" aria-label="Close">&times;</button>
-    <video id="wallCamera" autoplay playsinline muted></video>
-    <div class="wall-art-wrap" id="wallArtWrap">
-      <img id="wallArt" alt="Artwork preview" />
+    <video id="wallCamera" autoplay playsinline muted webkit-playsinline></video>
+    <img id="wallStill" class="wall-still" alt="" hidden />
+    <div class="wall-stage" id="wallStage">
+      <div class="piece finish-framed" id="wallPiece">
+        <div class="piece-shadow"></div>
+        <div class="wrap3d">
+          <div class="edge edge-t"></div>
+          <div class="edge edge-r"></div>
+          <div class="edge edge-b"></div>
+          <div class="edge edge-l"></div>
+          <div class="front">
+            <div class="frame" id="frameBox">
+              <div class="frame-lip">
+                <div class="mat" id="matBox">
+                  <div class="print">
+                    <img id="wallArt" alt="Artwork on your wall" draggable="false" />
+                    <div class="glass"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+    <div class="wall-readout" id="wallReadout">
+      <p class="wall-dims" id="wallDims">16 × 16 in</p>
+      <p class="wall-sub" id="wallSub">Including frame</p>
+    </div>
+    <p class="wall-status" id="wallStatus" hidden></p>
+    <div class="wall-fallback" id="wallFallback" hidden>
+      <p id="wallFallbackText">The live camera isn’t available in this browser.</p>
+      <label class="wall-file">
+        Take a photo of your wall
+        <input id="wallFile" type="file" accept="image/*" capture="environment" />
+      </label>
+      <button type="button" id="wallRetry">Try the camera again</button>
+    </div>
+    <button class="wall-flip" id="wallFlip" type="button">Flip camera</button>
+    <button class="wall-close" id="wallClose" type="button" aria-label="Close">&times;</button>
     <div class="wall-controls">
       <div class="wall-control-group">
-        <span class="wall-label">Size</span>
+        <span class="wall-label">Long side</span>
         <div class="wall-options" data-group="size">
-          <button data-value="small">Small</button>
-          <button data-value="medium" class="active">Medium</button>
-          <button data-value="large">Large</button>
+          <button type="button" data-value="8">8″</button>
+          <button type="button" data-value="12" class="active">12″</button>
+          <button type="button" data-value="16">16″</button>
+          <button type="button" data-value="24">24″</button>
         </div>
       </div>
       <div class="wall-control-group">
         <span class="wall-label">Finish</span>
         <div class="wall-options" data-group="finish">
-          <button data-value="paper" class="active">Paper</button>
-          <button data-value="framed">Framed</button>
-          <button data-value="canvas">Canvas</button>
+          <button type="button" data-value="framed" class="active">Framed</button>
+          <button type="button" data-value="canvas">Canvas</button>
         </div>
       </div>
     </div>
+    <p class="wall-hint">Drag to place. Pinch if you are closer or further than about four feet.</p>
   </div>
 
   <script>
@@ -361,65 +397,308 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     // —— WALL PREVIEW ——————————————————————————————————————————————
     const wallPreview = document.getElementById('wallPreview');
     const wallCamera = document.getElementById('wallCamera') as HTMLVideoElement | null;
+    const wallStill = document.getElementById('wallStill') as HTMLImageElement | null;
     const wallArt = document.getElementById('wallArt') as HTMLImageElement | null;
-    const wallArtWrap = document.getElementById('wallArtWrap');
+    const wallPiece = document.getElementById('wallPiece');
+    const wallStage = document.getElementById('wallStage');
     const wallBtn = document.getElementById('wallBtn');
     const wallClose = document.getElementById('wallClose');
+    const wallFlip = document.getElementById('wallFlip');
+    const wallRetry = document.getElementById('wallRetry');
+    const wallFile = document.getElementById('wallFile') as HTMLInputElement | null;
+    const wallFallback = document.getElementById('wallFallback');
+    const wallFallbackText = document.getElementById('wallFallbackText');
+    const wallStatus = document.getElementById('wallStatus');
+    const wallDims = document.getElementById('wallDims');
+    const wallSub = document.getElementById('wallSub');
+    const frameBox = document.getElementById('frameBox') as HTMLElement | null;
+    const matBox = document.getElementById('matBox') as HTMLElement | null;
 
     let cameraStream: MediaStream | null = null;
-    let currentSize = 'medium';
-    let currentFinish = 'paper';
+    let facing: 'environment' | 'user' = 'environment';
+    let longSide = 12;
+    let currentFinish: 'framed' | 'canvas' = 'framed';
+    let artW = 1;
+    let artH = 1;
+    let userScale = 1;
+    let ox = 0;
+    let oy = 0;
+    let openingCamera = false;
 
-    const sizeScales: Record<string, number> = { small: 0.45, medium: 0.65, large: 0.85 };
-
-    function updateWallArt() {
-      if (!wallArtWrap) return;
-      wallArtWrap.className = 'wall-art-wrap finish-' + currentFinish;
-      const scale = sizeScales[currentSize] || 0.65;
-      wallArtWrap.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    function fmtIn(n: number) {
+      const r = Math.round(n * 10) / 10;
+      return Number.isInteger(r) ? String(r) : r.toFixed(1);
     }
 
-    async function openWallPreview() {
+    function printInches() {
+      const aspect = artW / Math.max(artH, 1);
+      if (aspect > 0.97 && aspect < 1.03) return { w: longSide, h: longSide };
+      if (aspect >= 1) return { w: longSide, h: longSide / aspect };
+      return { w: longSide * aspect, h: longSide };
+    }
+
+    function frameExtras(printLong: number) {
+      if (currentFinish === 'canvas') return { mould: 0, mat: 0, depth: 1.5 };
+      if (printLong <= 12) return { mould: 0.75, mat: 1.5, depth: 0 };
+      if (printLong <= 16) return { mould: 1, mat: 2, depth: 0 };
+      return { mould: 1.25, mat: 2.5, depth: 0 };
+    }
+
+    function pixelsPerInch() {
+      // Rear-phone vertical field of view is about 60°.
+      // At four feet, that shows roughly 55 inches of wall.
+      const visibleInches = 55;
+      return (window.innerHeight / visibleInches) * userScale;
+    }
+
+    function layoutPiece() {
+      if (!wallPiece || !wallArt || !frameBox || !matBox) return;
+      const print = printInches();
+      const extra = frameExtras(Math.max(print.w, print.h));
+      const ppi = pixelsPerInch();
+      const printPx = print.w * ppi;
+
+      wallArt.style.width = `${printPx}px`;
+      frameBox.style.padding = `${extra.mould * ppi}px`;
+      matBox.style.padding = `${extra.mat * ppi}px`;
+      wallPiece.style.setProperty('--depth', `${Math.max(10, extra.depth * ppi)}px`);
+      wallPiece.className = 'piece finish-' + currentFinish;
+      wallPiece.style.transform = `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
+
+      const src = wallArt.src;
+      wallPiece.querySelectorAll<HTMLElement>('.edge').forEach((edge) => {
+        edge.style.backgroundImage = src ? `url("${src}")` : '';
+      });
+
+      const outerW = print.w + (extra.mould + extra.mat) * 2;
+      const outerH = print.h + (extra.mould + extra.mat) * 2;
+      if (wallDims) {
+        wallDims.textContent = `${fmtIn(outerW)} × ${fmtIn(outerH)} in`;
+      }
+      if (wallSub) {
+        if (currentFinish === 'canvas') {
+          wallSub.textContent = `Canvas ${fmtIn(print.w)} × ${fmtIn(print.h)} in, 1.5 in deep`;
+        } else {
+          wallSub.textContent = `Print ${fmtIn(print.w)} × ${fmtIn(print.h)} in, with mount and frame`;
+        }
+      }
+    }
+
+    function setStatus(message: string) {
+      if (!wallStatus) return;
+      wallStatus.hidden = !message;
+      wallStatus.textContent = message;
+    }
+
+    function showFallback(message: string) {
+      if (wallFallbackText) wallFallbackText.textContent = message;
+      wallFallback?.removeAttribute('hidden');
+      if (wallCamera) wallCamera.style.visibility = 'hidden';
+    }
+
+    function hideFallback() {
+      wallFallback?.setAttribute('hidden', '');
+      if (wallCamera) wallCamera.style.visibility = '';
+    }
+
+    function stopCamera() {
+      cameraStream?.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+      if (wallCamera) wallCamera.srcObject = null;
+    }
+
+    function inAppBrowser() {
+      return /FBAN|FBAV|Instagram|TikTok|Snapchat|Line\//i.test(navigator.userAgent || '');
+    }
+
+    async function attachStream(stream: MediaStream) {
+      if (!wallCamera) return;
+      stopCamera();
+      cameraStream = stream;
+      wallCamera.muted = true;
+      wallCamera.defaultMuted = true;
+      wallCamera.playsInline = true;
+      wallCamera.setAttribute('playsinline', '');
+      wallCamera.setAttribute('webkit-playsinline', 'true');
+      wallCamera.srcObject = stream;
+      wallCamera.style.transform = facing === 'user' ? 'scaleX(-1)' : '';
+      wallStill?.setAttribute('hidden', '');
+      try {
+        await wallCamera.play();
+      } catch {
+        // Some browsers start playback once the element is visible.
+      }
+      hideFallback();
+      setStatus('');
+    }
+
+    async function startCamera() {
+      if (openingCamera) return;
+      openingCamera = true;
+      setStatus('Asking for the camera…');
+
+      if (!window.isSecureContext) {
+        setStatus('');
+        showFallback('The camera only works on the secure https site. Open mothamaker.com directly.');
+        openingCamera = false;
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus('');
+        showFallback(inAppBrowser()
+          ? 'This in-app browser blocks the camera. Open the page in Safari or Chrome, or take a photo of the wall.'
+          : 'This browser can’t open a live camera. Take a photo of the wall instead.');
+        openingCamera = false;
+        return;
+      }
+
+      const gum = (constraints: MediaStreamConstraints) => navigator.mediaDevices.getUserMedia(constraints);
+
+      let stream: MediaStream;
+      try {
+        // The plain request is what actually raises the permission prompt on iPhone and Android.
+        stream = await gum({ audio: false, video: true });
+      } catch (error) {
+        setStatus('');
+        const name = error instanceof DOMException ? error.name : '';
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          showFallback('Camera permission was blocked. Allow the camera for this site in your browser settings, or take a photo of the wall.');
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          showFallback('No camera was found on this device. Take a photo of the wall instead.');
+        } else if (inAppBrowser()) {
+          showFallback('Open this page in Safari or Chrome to use the live camera, or take a photo of the wall.');
+        } else {
+          showFallback('The camera didn’t start. Take a photo of the wall, or try again.');
+        }
+        openingCamera = false;
+        return;
+      }
+
+      const seen = stream.getVideoTracks()[0]?.getSettings?.().facingMode;
+      if (seen && seen !== facing) {
+        stream.getTracks().forEach((track) => track.stop());
+        try {
+          stream = await gum({ audio: false, video: { facingMode: { ideal: facing } } });
+        } catch {
+          try {
+            stream = await gum({ audio: false, video: true });
+          } catch {
+            setStatus('');
+            showFallback('The camera closed before it could start. Try again, or take a photo of the wall.');
+            openingCamera = false;
+            return;
+          }
+        }
+      }
+
+      const mode = stream.getVideoTracks()[0]?.getSettings?.().facingMode;
+      if (mode === 'user' || mode === 'environment') facing = mode;
+      await attachStream(stream);
+      openingCamera = false;
+    }
+
+    function openWallPreview() {
       if (!lightboxImg?.src || !wallPreview || !wallArt) return;
+      ox = 0;
+      oy = 0;
+      userScale = 1;
       wallArt.src = lightboxImg.src;
       wallPreview.classList.add('active');
-      updateWallArt();
-
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (wallCamera) wallCamera.srcObject = cameraStream;
-      } catch {
-        // Camera denied — still show the overlay so the user can see the concept
-        if (wallCamera) wallCamera.style.display = 'none';
-      }
+      hideFallback();
+      layoutPiece();
+      // Invoke getUserMedia inside the tap, before any await.
+      void startCamera();
     }
 
     function closeWallPreview() {
       wallPreview?.classList.remove('active');
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-      }
-      if (wallCamera) {
-        wallCamera.srcObject = null;
-        wallCamera.style.display = '';
-      }
+      stopCamera();
+      setStatus('');
+      hideFallback();
     }
 
-    wallBtn?.addEventListener('click', openWallPreview);
-    wallClose?.addEventListener('click', closeWallPreview);
+    wallArt?.addEventListener('load', () => {
+      artW = wallArt.naturalWidth || 1;
+      artH = wallArt.naturalHeight || 1;
+      layoutPiece();
+    });
 
-    document.querySelectorAll('.wall-options').forEach(group => {
-      group.querySelectorAll('button').forEach(btn => {
+    wallBtn?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openWallPreview();
+    });
+    wallClose?.addEventListener('click', closeWallPreview);
+    wallRetry?.addEventListener('click', () => {
+      hideFallback();
+      void startCamera();
+    });
+    wallFlip?.addEventListener('click', () => {
+      facing = facing === 'environment' ? 'user' : 'environment';
+      void startCamera();
+    });
+
+    wallFile?.addEventListener('change', () => {
+      const file = wallFile.files?.[0];
+      if (!file || !wallStill) return;
+      wallStill.src = URL.createObjectURL(file);
+      wallStill.hidden = false;
+      stopCamera();
+      if (wallCamera) wallCamera.style.visibility = 'hidden';
+      hideFallback();
+      setStatus('');
+    });
+
+    document.querySelectorAll('.wall-options').forEach((group) => {
+      group.querySelectorAll('button').forEach((btn) => {
         btn.addEventListener('click', () => {
           const g = (group as HTMLElement).dataset.group;
-          group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+          group.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
-          if (g === 'size') currentSize = btn.dataset.value || 'medium';
-          if (g === 'finish') currentFinish = btn.dataset.value || 'paper';
-          updateWallArt();
+          if (g === 'size') longSide = Number(btn.dataset.value) || 12;
+          if (g === 'finish') currentFinish = (btn.dataset.value as 'framed' | 'canvas') || 'framed';
+          layoutPiece();
         });
       });
+    });
+
+    let drag: { x: number; y: number; ox: number; oy: number } | null = null;
+    wallPiece?.addEventListener('pointerdown', (event) => {
+      if (!wallPiece) return;
+      if ((event.target as HTMLElement).closest('button')) return;
+      wallPiece.setPointerCapture(event.pointerId);
+      drag = { x: event.clientX, y: event.clientY, ox, oy };
+    });
+    wallPiece?.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      ox = drag.ox + (event.clientX - drag.x);
+      oy = drag.oy + (event.clientY - drag.y);
+      layoutPiece();
+    });
+    wallPiece?.addEventListener('pointerup', () => { drag = null; });
+    wallPiece?.addEventListener('pointercancel', () => { drag = null; });
+
+    function touchDistance(touches: TouchList) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
+    }
+    let pinch: { dist: number; scale: number } | null = null;
+    wallStage?.addEventListener('touchstart', (event) => {
+      if (event.touches.length === 2) {
+        pinch = { dist: touchDistance(event.touches), scale: userScale };
+      }
+    }, { passive: true });
+    wallStage?.addEventListener('touchmove', (event) => {
+      if (event.touches.length === 2 && pinch) {
+        event.preventDefault();
+        const next = pinch.scale * (touchDistance(event.touches) / pinch.dist);
+        userScale = Math.min(2.6, Math.max(0.45, next));
+        layoutPiece();
+      }
+    }, { passive: false });
+    wallStage?.addEventListener('touchend', () => { pinch = null; });
+    window.addEventListener('resize', () => {
+      if (wallPreview?.classList.contains('active')) layoutPiece();
     });
   </script>
 
