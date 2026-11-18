@@ -149,6 +149,28 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
         </div>
       </div>
     </div>
+    <model-viewer
+      id="wallModel"
+      class="wall-model"
+      ar
+      ar-modes="webxr quick-look"
+      ar-placement="wall"
+      ar-scale="fixed"
+      camera-controls
+      disable-zoom
+      disable-pan
+      interaction-prompt="none"
+      camera-orbit="-22deg 82deg auto"
+      min-camera-orbit="-60deg 55deg auto"
+      max-camera-orbit="60deg 110deg auto"
+      environment-image="neutral"
+      tone-mapping="neutral"
+      shadow-intensity="1"
+      shadow-softness="0.9"
+      alt="3D preview of the artwork at its real size">
+      <span slot="ar-button" hidden></span>
+      <span slot="progress-bar" hidden></span>
+    </model-viewer>
     <div class="wall-readout" id="wallReadout">
       <p class="wall-dims" id="wallDims">16 × 16 in</p>
       <p class="wall-sub" id="wallSub">Including frame</p>
@@ -181,8 +203,13 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
           <button type="button" data-value="canvas">Canvas</button>
         </div>
       </div>
+      <div class="wall-ar-panel">
+        <button class="wall-ar-btn" id="wallArBtn" type="button" disabled>Preparing 3D view…</button>
+        <p class="wall-ar-note">Your camera finds the wall and hangs the piece at its real size. Move your phone slowly across the wall until it appears, then drag it into place.</p>
+        <button class="wall-link" id="wallUseCamera" type="button">Use the simple camera view instead</button>
+      </div>
+      <p class="wall-hint">Drag to place. Pinch if you are closer or further than about four feet.</p>
     </div>
-    <p class="wall-hint">Drag to place. Pinch if you are closer or further than about four feet.</p>
   </div>
 
   <script>
@@ -413,6 +440,28 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     const wallSub = document.getElementById('wallSub');
     const frameBox = document.getElementById('frameBox') as HTMLElement | null;
     const matBox = document.getElementById('matBox') as HTMLElement | null;
+    const wallModel = document.getElementById('wallModel') as (HTMLElement & {
+      src: string | null;
+      canActivateAR: boolean;
+      activateAR(): Promise<void>;
+    }) | null;
+    const wallArBtn = document.getElementById('wallArBtn') as HTMLButtonElement | null;
+    const wallUseCamera = document.getElementById('wallUseCamera');
+
+    // Real wall placement needs AR: Quick Look on iPhone and iPad, WebXR on Android.
+    // Check up front so the tap that opens the preview can pick a mode straight away.
+    const quickLookAR = (() => {
+      try {
+        return document.createElement('a').relList.supports('ar');
+      } catch {
+        return false;
+      }
+    })();
+    let webxrAR = false;
+    (navigator as Navigator & { xr?: { isSessionSupported(mode: string): Promise<boolean> } }).xr
+      ?.isSessionSupported('immersive-ar')
+      .then((ok) => { webxrAR = ok; })
+      .catch(() => {});
 
     let cameraStream: MediaStream | null = null;
     let facing: 'environment' | 'user' = 'environment';
@@ -605,6 +654,102 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       openingCamera = false;
     }
 
+    // —— AR mode: a real-size 3D model the phone hangs on the wall ——
+    let wallLib: Promise<typeof import('../scripts/wall-model')> | null = null;
+    let modelUrl = '';
+    let modelJob = 0;
+    let modelTimer = 0;
+
+    function setMode(mode: 'ar' | 'camera') {
+      wallPreview?.classList.toggle('mode-ar', mode === 'ar');
+      wallPreview?.classList.toggle('mode-camera', mode === 'camera');
+    }
+
+    function setArButton(ready: boolean) {
+      if (!wallArBtn) return;
+      wallArBtn.disabled = !ready;
+      wallArBtn.textContent = ready ? 'See it on my wall' : 'Preparing 3D view…';
+    }
+
+    function loadImage(src: string) {
+      return new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Could not load ${src}`));
+        img.src = src;
+      });
+    }
+
+    function useCameraView() {
+      modelJob++;
+      clearTimeout(modelTimer);
+      setMode('camera');
+      layoutPiece();
+      void startCamera();
+    }
+
+    async function buildModel() {
+      if (!wallModel || !wallArt?.src) return;
+      const job = ++modelJob;
+      setArButton(false);
+      try {
+        wallLib ??= import('../scripts/wall-model');
+        const [lib, img] = await Promise.all([wallLib, loadImage(wallArt.src)]);
+        if (job !== modelJob) return;
+        artW = img.naturalWidth || artW;
+        artH = img.naturalHeight || artH;
+        layoutPiece();
+        const print = printInches();
+        const extra = frameExtras(Math.max(print.w, print.h));
+        const url = await lib.buildPieceModel({
+          image: img,
+          printW: print.w,
+          printH: print.h,
+          finish: currentFinish,
+          mould: extra.mould,
+          mat: extra.mat,
+        });
+        if (job !== modelJob) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        const previous = modelUrl;
+        modelUrl = url;
+        wallModel.src = url;
+        if (previous) setTimeout(() => URL.revokeObjectURL(previous), 5000);
+      } catch (error) {
+        console.error('[wall] Could not build the 3D model', error);
+        if (job === modelJob) useCameraView();
+      }
+    }
+
+    function scheduleModel() {
+      clearTimeout(modelTimer);
+      modelTimer = window.setTimeout(() => void buildModel(), 150);
+    }
+
+    wallModel?.addEventListener('load', () => {
+      if (wallModel.src === modelUrl) setArButton(true);
+    });
+    wallModel?.addEventListener('error', (event) => {
+      console.error('[wall] model-viewer error', (event as CustomEvent).detail);
+      if (wallPreview?.classList.contains('mode-ar')) useCameraView();
+    });
+    wallModel?.addEventListener('ar-status', (event) => {
+      const status = (event as CustomEvent<{ status: string }>).detail?.status;
+      if (status === 'failed') useCameraView();
+    });
+    wallArBtn?.addEventListener('click', () => {
+      if (!wallModel) return;
+      if (!wallModel.canActivateAR) {
+        useCameraView();
+        return;
+      }
+      // Must run inside the tap: AR sessions need a user gesture.
+      void wallModel.activateAR();
+    });
+    wallUseCamera?.addEventListener('click', useCameraView);
+
     function openWallPreview() {
       if (!lightboxImg?.src || !wallPreview || !wallArt) return;
       ox = 0;
@@ -614,12 +759,22 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       wallPreview.classList.add('active');
       hideFallback();
       layoutPiece();
-      // Invoke getUserMedia inside the tap, before any await.
-      void startCamera();
+      // `?fake-ar` shows the AR screen on a desktop dev server; it is stripped from the live build.
+      const fakeAR = import.meta.env.DEV && location.search.includes('fake-ar');
+      if (fakeAR || quickLookAR || webxrAR) {
+        setMode('ar');
+        void buildModel();
+      } else {
+        setMode('camera');
+        // Invoke getUserMedia inside the tap, before any await.
+        void startCamera();
+      }
     }
 
     function closeWallPreview() {
       wallPreview?.classList.remove('active');
+      modelJob++;
+      clearTimeout(modelTimer);
       stopCamera();
       setStatus('');
       hideFallback();
@@ -665,6 +820,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
           if (g === 'size') longSide = Number(btn.dataset.value) || 12;
           if (g === 'finish') currentFinish = (btn.dataset.value as 'framed' | 'canvas') || 'framed';
           layoutPiece();
+          if (wallPreview?.classList.contains('mode-ar')) scheduleModel();
         });
       });
     });
