@@ -117,8 +117,34 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
           allowfullscreen></iframe>
       </div>
       <div class="lightbox-actions" id="lightboxActions">
-        <button class="buy-btn buy-print" type="button">Buy print</button>
-        <button class="buy-btn buy-framed" type="button">Buy framed</button>
+        <button class="wall-btn" id="wallBtn" type="button">What would it look like on my wall?</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wall preview overlay -->
+  <div class="wall-preview" id="wallPreview">
+    <button class="wall-close" id="wallClose" aria-label="Close">&times;</button>
+    <video id="wallCamera" autoplay playsinline muted></video>
+    <div class="wall-art-wrap" id="wallArtWrap">
+      <img id="wallArt" alt="Artwork preview" />
+    </div>
+    <div class="wall-controls">
+      <div class="wall-control-group">
+        <span class="wall-label">Size</span>
+        <div class="wall-options" data-group="size">
+          <button data-value="small">Small</button>
+          <button data-value="medium" class="active">Medium</button>
+          <button data-value="large">Large</button>
+        </div>
+      </div>
+      <div class="wall-control-group">
+        <span class="wall-label">Finish</span>
+        <div class="wall-options" data-group="finish">
+          <button data-value="paper" class="active">Paper</button>
+          <button data-value="framed">Framed</button>
+          <button data-value="canvas">Canvas</button>
+        </div>
       </div>
     </div>
   </div>
@@ -153,7 +179,7 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
         if (!hash) return;
         const onHome = location.pathname === '/' || location.pathname === '/index.html';
         const targetsHome = anchor.getAttribute('href')!.startsWith('#') || onHome;
-        if (!targetsHome) return; // navigating to another page — let it through
+        if (!targetsHome) return;
         const target = document.querySelector(hash);
         if (target) {
           e.preventDefault();
@@ -188,7 +214,6 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
     let currentIndex = 0;
     let videoIds: string[] = [];
 
-    // Gallery image lists are embedded at build time
     const galleryDataEl = document.getElementById('gallery-data');
     const galleryImages: Record<string, string[]> = galleryDataEl
       ? JSON.parse(galleryDataEl.textContent || '{}')
@@ -271,7 +296,6 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       else stepVideo(direction);
     }
 
-    // —— CLOSE / NAVIGATE ——————————————————————————————————————————
     function closeLightbox() {
       if (!lightbox?.classList.contains('active')) return;
       lightbox.classList.remove('visible');
@@ -302,7 +326,6 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       if (e.key === 'ArrowRight') step(1);
     });
 
-    // —— TOUCH SWIPE (velocity + distance gated) ———————————————————
     let touchStartX = 0, touchStartY = 0, touchStartTime = 0, swipeLocked = false;
     lightbox?.addEventListener('touchstart', (e) => {
       if (!lightbox.classList.contains('active')) return;
@@ -323,7 +346,6 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
       step(dx < 0 ? 1 : -1);
     }, { passive: true });
 
-    // —— TRACKPAD TWO-FINGER SWIPE ————————————————————————————————
     let wheelLocked = false;
     lightbox?.addEventListener('wheel', (e) => {
       if (!lightbox.classList.contains('active')) return;
@@ -335,6 +357,70 @@ const ogImageUrl = new URL(ogImage ?? defaultOg.src, Astro.site).href;
         step(e.deltaX > 0 ? 1 : -1);
       }
     }, { passive: false });
+
+    // —— WALL PREVIEW ——————————————————————————————————————————————
+    const wallPreview = document.getElementById('wallPreview');
+    const wallCamera = document.getElementById('wallCamera') as HTMLVideoElement | null;
+    const wallArt = document.getElementById('wallArt') as HTMLImageElement | null;
+    const wallArtWrap = document.getElementById('wallArtWrap');
+    const wallBtn = document.getElementById('wallBtn');
+    const wallClose = document.getElementById('wallClose');
+
+    let cameraStream: MediaStream | null = null;
+    let currentSize = 'medium';
+    let currentFinish = 'paper';
+
+    const sizeScales: Record<string, number> = { small: 0.45, medium: 0.65, large: 0.85 };
+
+    function updateWallArt() {
+      if (!wallArtWrap) return;
+      wallArtWrap.className = 'wall-art-wrap finish-' + currentFinish;
+      const scale = sizeScales[currentSize] || 0.65;
+      wallArtWrap.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    async function openWallPreview() {
+      if (!lightboxImg?.src || !wallPreview || !wallArt) return;
+      wallArt.src = lightboxImg.src;
+      wallPreview.classList.add('active');
+      updateWallArt();
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (wallCamera) wallCamera.srcObject = cameraStream;
+      } catch {
+        // Camera denied — still show the overlay so the user can see the concept
+        if (wallCamera) wallCamera.style.display = 'none';
+      }
+    }
+
+    function closeWallPreview() {
+      wallPreview?.classList.remove('active');
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+      if (wallCamera) {
+        wallCamera.srcObject = null;
+        wallCamera.style.display = '';
+      }
+    }
+
+    wallBtn?.addEventListener('click', openWallPreview);
+    wallClose?.addEventListener('click', closeWallPreview);
+
+    document.querySelectorAll('.wall-options').forEach(group => {
+      group.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const g = (group as HTMLElement).dataset.group;
+          group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          if (g === 'size') currentSize = btn.dataset.value || 'medium';
+          if (g === 'finish') currentFinish = btn.dataset.value || 'paper';
+          updateWallArt();
+        });
+      });
+    });
   </script>
 
   <!-- Cloudflare Web Analytics -->
